@@ -5,28 +5,13 @@ from urllib.parse import parse_qs
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from rest_framework_simplejwt.tokens import UntypedToken
+
+from apps.core.channels_auth import admin_user_from_token_sync
 
 
 @database_sync_to_async
 def admin_user_from_token(raw: str):
-    try:
-        token = UntypedToken(raw)
-    except (InvalidToken, TokenError):
-        return None
-    try:
-        user = get_user_model().objects.get(pk=token["user_id"])
-    except Exception:
-        return None
-    if not user.is_active:
-        return None
-    if not (
-        user.is_superuser or getattr(user, "role", None) in ("superadmin", "admin")
-    ):
-        return None
-    return user
+    return admin_user_from_token_sync(raw)
 
 
 class SiteProgressConsumer(AsyncWebsocketConsumer):

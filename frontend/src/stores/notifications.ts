@@ -11,6 +11,8 @@ export interface AppNotification {
 interface NotificationsState {
   items: AppNotification[];
   push: (n: Omit<AppNotification, "id" | "createdAt" | "read">) => void;
+  setItems: (items: AppNotification[]) => void;
+  markOneRead: (id: string) => void;
   markAllRead: () => void;
 }
 
@@ -23,6 +25,8 @@ export const useNotificationsStore = create<NotificationsState>()((set) => ({
         ...s.items,
       ].slice(0, 50),
     })),
+  setItems: (items) => set({ items: items.slice(0, 50) }),
+  markOneRead: (id) => set((s) => ({ items: s.items.map((i) => (String(i.id) === String(id) ? { ...i, read: true } : i)) })),
   markAllRead: () => set((s) => ({ items: s.items.map((i) => ({ ...i, read: true })) })),
 }));
 

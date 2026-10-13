@@ -44,6 +44,7 @@ services:
     volumes:
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -71,6 +72,7 @@ services:
     volumes:
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -98,6 +100,7 @@ services:
     volumes:
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -123,6 +126,7 @@ services:
     volumes:
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -150,3 +154,4 @@ volumes:
   redisdata:
   staticfiles:
   mediafiles:
+  backups:

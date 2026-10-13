@@ -121,11 +121,14 @@ CACHES = {
     }
 }
 
-# --- Channels ---
+# --- Channels: explicit socket timeout. redis-py 8 defaults socket_timeout to 5 s,
+# which deterministically kills idle channel-layer polls (server and client
+# timers race at the 5 s mark). 60 s lets polls return cleanly; wedged sockets
+# are still reaped within a minute.
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {"hosts": [REDIS_URL]},
+        "CONFIG": {"hosts": [{"address": REDIS_URL, "socket_timeout": 60}]},
     }
 }
 
@@ -225,6 +228,11 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
 
 # --- Uploads ---
 MEDIA_MAX_BYTES = int(os.environ.get("MEDIA_MAX_BYTES", str(10 * 1024 * 1024)))
+
+# --- Backups / retention ---
+BACKUP_DIR = os.environ.get("BACKUP_DIR", "/vol/backups")
+BACKUP_KEEP_COUNT = int(os.environ.get("BACKUP_KEEP_COUNT", "7"))
+VERSION_KEEP_COUNT = int(os.environ.get("VERSION_KEEP_COUNT", "20"))
 
 # --- Sentry (optional) ---
 if os.environ.get("SENTRY_DSN"):

@@ -136,6 +136,19 @@ Open:
   drag reorder, enable toggles), posts, menus, themes gallery + assign, products
   with variants/stock, cross-page sections list.
 
+## Monitoring, notifications & audit (Phase 8)
+
+- `HealthCheck` history (uptime/SSL/connector) + `Notification` inbox with a live
+  WebSocket (`ws/notifications/`, JWT-gated). Failures notify once per transition
+  (no spam); recoveries notify too. Bell badge updates in real time.
+- Beat schedules in the DB (migration): uptime 5 min, SSL/connector/sitemap/
+  backup/cleanup daily. Backups are dumpdata JSON in `/vol/backups` (keep 7);
+  cleanup trims versions (keep 20, never the published one) + old checks.
+- Monitoring page (per-site status + history), full Audit Logs page (site/action/
+  actor/search filters + pagination), Users & Roles page (create, role, active,
+  delete with self/last-superadmin guards), Settings page (profile, password,
+  TOTP 2FA setup/disable).
+
 Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
 (`docker compose down -v && docker compose up -d`). Not needed going forward.
 

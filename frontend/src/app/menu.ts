@@ -54,10 +54,10 @@ export const MENU: MenuSection[] = [
   {
     title: "System",
     items: [
-      { to: "/monitoring", label: "Monitoring", icon: MonitorCheck, phase: 8 },
-      { to: "/audit", label: "Audit Logs", icon: ScrollText, phase: 8 },
-      { to: "/users", label: "Users & Roles", icon: Users, phase: 8 },
-      { to: "/settings", label: "Settings", icon: SettingsIcon, phase: 8 },
+      { to: "/monitoring", label: "Monitoring", icon: MonitorCheck },
+      { to: "/audit", label: "Audit Logs", icon: ScrollText },
+      { to: "/users", label: "Users & Roles", icon: Users },
+      { to: "/settings", label: "Settings", icon: SettingsIcon },
     ],
   },
 ];

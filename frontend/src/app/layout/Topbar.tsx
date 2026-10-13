@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Bell, ChevronsLeft, ChevronsRight, LogOut, Menu, Moon, Search, Sun } from "lucide-react";
 import { ALL_ENTRIES } from "../menu";
 import { logout } from "../../features/auth/api";
+import { markAllNotificationsRead } from "../../features/notifications/useNotificationsSocket";
 import { useAuthStore } from "../../stores/auth";
 import { unreadCount, useNotificationsStore } from "../../stores/notifications";
 import { useUiStore } from "../../stores/ui";
@@ -16,7 +17,6 @@ export default function Topbar() {
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const setMobileNav = useUiStore((s) => s.setMobileNav);
   const notifications = useNotificationsStore((s) => s.items);
-  const markAllRead = useNotificationsStore((s) => s.markAllRead);
 
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -122,13 +122,13 @@ export default function Topbar() {
           <div className="absolute right-0 z-50 mt-1 w-72 rounded border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800">
             <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 dark:border-slate-700">
               <p className="text-sm font-semibold">Notifications</p>
-              <button onClick={markAllRead} className="text-xs text-slate-500 underline">
+              <button onClick={() => void markAllNotificationsRead()} className="text-xs text-slate-500 underline">
                 Mark all read
               </button>
             </div>
             {notifications.length === 0 ? (
               <p className="px-3 py-4 text-sm text-slate-500">
-                No notifications yet. Monitoring alerts arrive here in Phase 8.
+                All clear. Uptime, SSL and connector alerts appear here live.
               </p>
             ) : (
               <ul className="max-h-64 overflow-y-auto">

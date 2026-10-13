@@ -44,6 +44,8 @@ services:
       - ./backend:/app
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -77,6 +79,7 @@ services:
       - ./backend:/app
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -110,6 +113,7 @@ services:
       - ./backend:/app
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -143,6 +147,7 @@ services:
       - ./backend:/app
       - staticfiles:/vol/static
       - mediafiles:/vol/media
+      - backups:/vol/backups
     depends_on:
       db:
         condition: service_healthy
@@ -196,3 +201,4 @@ volumes:
   redisdata:
   staticfiles:
   mediafiles:
+  backups:

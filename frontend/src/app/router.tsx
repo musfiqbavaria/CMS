@@ -8,6 +8,10 @@ import EditorPage from "../features/editor/pages/EditorPage";
 import MappingsPage from "../features/connector/pages/MappingsPage";
 import SetupPage from "../features/connector/pages/SetupPage";
 import MediaPage from "../features/builder/pages/MediaPage";
+import MonitoringPage from "../features/monitoring/MonitoringPage";
+import AuditPage from "../features/audit/AuditPage";
+import UsersPage from "../features/users/UsersPage";
+import SettingsPage from "../features/settings/SettingsPage";
 import MenusPage from "../features/builder/pages/MenusPage";
 import PageEditorPage from "../features/builder/pages/PageEditorPage";
 import PagesPage from "../features/builder/pages/PagesPage";
@@ -17,7 +21,6 @@ import SectionsPage from "../features/builder/pages/SectionsPage";
 import ThemesPage from "../features/builder/pages/ThemesPage";
 import SitesPage from "../features/sites/pages/SitesPage";
 import VerifyPage from "../features/sites/pages/VerifyPage";
-import StubPage from "../shared/ui/StubPage";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
@@ -44,10 +47,10 @@ export const router = createBrowserRouter([
           { path: "/builder/products", element: <ProductsPage /> },
           { path: "/media", element: <MediaPage /> },
           { path: "/templates", element: <ThemesPage /> },
-          { path: "/monitoring", element: <StubPage title="Monitoring" phase={8} /> },
-          { path: "/audit", element: <StubPage title="Audit Logs" phase={8} /> },
-          { path: "/users", element: <StubPage title="Users & Roles" phase={8} /> },
-          { path: "/settings", element: <StubPage title="Settings" phase={8} /> },
+          { path: "/monitoring", element: <MonitoringPage /> },
+          { path: "/audit", element: <AuditPage /> },
+          { path: "/users", element: <UsersPage /> },
+          { path: "/settings", element: <SettingsPage /> },
         ],
       },
     ],

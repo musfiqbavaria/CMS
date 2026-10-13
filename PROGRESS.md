@@ -4,6 +4,23 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 8 — Monitoring, Notifications & Audit (done)
+- `HealthCheck` + `Notification` models/migrations; uptime/SSL/connector services
+  with transition-only notifications; `ws/notifications/` socket + frontend hook
+  feeding the bell; Beat DB schedules migration (6 jobs); dumpdata backups with
+  retention; version/health retention cleanup; sitemap refresh fan-out.
+- Users & Roles API (self/last-superadmin guards) + page; Audit Logs page with
+  filters; Monitoring page with summary + history; Settings page (profile,
+  password, 2FA setup/disable UI).
+- Tests: 10 pytest (transitions, connector, socket push, users guards, beat
+  schedules, cleanup, backup) + 1 vitest (notifications store).
+  Full suite: 81 pytest, 14 vitest, lint + build clean.
+- E2E: simulated down site → fail check + `site_down` row + summary `fail`;
+  live WS push verified after transient Redis contention cleared.
+- Real bug fixed: redis-py 8 defaults `socket_timeout` to 5 s, which killed every
+  idle channel-layer poll in Daphne; channel layer now sets 60 s. Both WS hooks
+  also reconnect with backoff.
+
 ### Phase 7 — Website Builder (done)
 - Builder models/migrations (themes, pages/sections, posts/taxonomy, menus,
   products) + `Site.theme` FK. Built-site-only enforcement in serializers.

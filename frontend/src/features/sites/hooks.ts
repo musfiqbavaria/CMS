@@ -23,14 +23,31 @@ export function useSiteProgress(siteId: number | null, onEvent: (e: ProgressEven
 
   useEffect(() => {
     if (!siteId || !token) return;
-    const ws = new WebSocket(`${wsBase()}/ws/sites/${siteId}/progress/?token=${encodeURIComponent(token)}`);
-    ws.onmessage = (msg) => {
-      try {
-        handler.current(JSON.parse(msg.data) as ProgressEvent);
-      } catch {
-        // ignore malformed frames
-      }
+    let closed = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let attempts = 0;
+    function connect() {
+      const liveToken = useAuthStore.getState().accessToken;
+      if (closed || !liveToken) return;
+      const ws = new WebSocket(`${wsBase()}/ws/sites/${siteId}/progress/?token=${encodeURIComponent(liveToken)}`);
+      ws.onmessage = (msg) => {
+        try {
+          handler.current(JSON.parse(msg.data) as ProgressEvent);
+        } catch {
+          // ignore malformed frames
+        }
+      };
+      ws.onclose = () => {
+        if (closed) return;
+        attempts += 1;
+        if (attempts > 5) return;
+        timer = setTimeout(connect, Math.min(1000 * 2 ** attempts, 15000));
+      };
+    }
+    connect();
+    return () => {
+      closed = true;
+      if (timer) clearTimeout(timer);
     };
-    return () => ws.close();
   }, [siteId, token]);
 }
