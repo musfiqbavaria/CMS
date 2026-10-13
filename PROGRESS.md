@@ -4,6 +4,19 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 2 — Admin Shell & Dashboard (done)
+- `AdminLayout`: collapsible desktop sidebar, mobile drawer, topbar (page search,
+  dark/light mode persisted, notifications bell with honest empty state, profile
+  menu + sign-out). All menu routes exist; non-dashboard pages are marked stubs
+  owned by Phases 3/5/7/8.
+- Dashboard API `GET /api/v1/stats/overview/` (admin-only, 45 s cache): user
+  aggregates, 14-day signup series, beat schedule count, recent users, live
+  db/redis/celery-worker status. Dashboard page shows stat cards, recharts
+  area chart, system status, recent-users table with skeletons/error/retry.
+- Tests: 2 pytest stats tests (gate + live data), vitest Sidebar menu test +
+  ui-store test (4 frontend tests total). flake8/black/isort + eslint +
+  `tsc + vite build` clean.
+
 ### Phase 1 — Authentication & Access Control (done)
 - Custom `User` (`accounts`): roles, TOTP secret/flag, lockout fields; migration `0001_initial`.
 - JWT session: access in memory, rotating refresh in httpOnly cookie (`Secure` in prod),
@@ -50,5 +63,5 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 2 — Admin Shell & Dashboard (AdminLayout sidebar/topbar, all menu routes,
-  real stats API with charts; replace TempHomePage).
+- Phase 3 — Websites Management (Site model + CRUD API, list UI with
+  search/filter/sort/pagination/bulk actions, audit logging).

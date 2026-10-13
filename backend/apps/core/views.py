@@ -35,3 +35,11 @@ def health_check(request):
         {"status": "ok" if status_code == 200 else "degraded", **checks},
         status=status_code,
     )
+
+
+@api_view(["GET"])
+def dashboard_overview_view(request):
+    """Admin dashboard aggregates. Default-deny permissions apply (no AllowAny)."""
+    from .selectors import dashboard_overview
+
+    return Response(dashboard_overview())

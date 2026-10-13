@@ -54,6 +54,16 @@ Open:
   `/connector/*`. API docs at `/api/docs/` are admin-only.
 - Login UI at `/login`; all other pages redirect there when unauthenticated.
 
+## Admin shell & dashboard (Phase 2)
+
+- `AdminLayout`: collapsible sidebar (desktop) + drawer (mobile), topbar with
+  page search, dark/light mode, notifications bell, profile menu with sign-out.
+- All sidebar routes exist: `/` Dashboard (live), the rest are clearly-marked
+  stubs owned by their phase (`/websites` → 3, `/media` → 5, builder → 7, system → 8).
+- Dashboard API `GET /api/v1/stats/overview/` (admin-only, cached 45 s): user
+  aggregates, signups-by-day chart data, beat schedule count, recent users,
+  system status (db/redis/celery worker ping).
+
 Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
 (`docker compose down -v && docker compose up -d`). Not needed going forward.
 
