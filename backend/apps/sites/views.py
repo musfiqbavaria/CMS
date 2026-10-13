@@ -44,7 +44,7 @@ class SiteViewSet(viewsets.ModelViewSet):
             actor=self.request.user,
             site=site,
             request=self.request,
-            **serializer.validated_data
+            **serializer.validated_data,
         )
         serializer.instance = updated
 
@@ -82,3 +82,36 @@ class SiteViewSet(viewsets.ModelViewSet):
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(result)
+
+    @action(detail=True, methods=["post"], url_path="discover")
+    def discover(self, request, pk=None):
+        """Re-run auto-discovery for a connected site (202, progress over WebSocket)."""
+        from .tasks import discover_site
+
+        site = self.get_object()
+        if site.type != Site.Types.CONNECTED:
+            return Response(
+                {"detail": "Discovery applies to connected sites only."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        discover_site.delay(site.pk)
+        return Response(
+            {"detail": "Discovery started."}, status=status.HTTP_202_ACCEPTED
+        )
+
+    @action(detail=True, methods=["post"], url_path="verify")
+    def verify(self, request, pk=None):
+        """Start an ownership check (202). Method: meta (HTML tag) or dns (TXT)."""
+        from .tasks import verify_site_ownership
+
+        method = (request.data.get("method") or "").lower()
+        if method not in ("meta", "dns"):
+            return Response(
+                {"detail": "Method must be 'meta' or 'dns'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        verify_site_ownership.delay(self.get_object().pk, method)
+        return Response(
+            {"detail": f"{method} verification started."},
+            status=status.HTTP_202_ACCEPTED,
+        )

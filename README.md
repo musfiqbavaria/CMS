@@ -77,6 +77,23 @@ Open:
   type/status filters, sortable columns, pagination, row selection with bulk bar,
   Add/Edit/Delete/Activate modals, per-site History modal.
 
+## Connect by domain (Phase 4)
+
+- Every outbound fetch goes through `apps/core/ssrf.py`: http/https only, default
+  ports, no credentials in URL, DNS resolution with public-IP enforcement
+  (private/loopback/link-local rejected), per-hop re-validation on redirects,
+  2 MB / 5-hop limits, direct connection (no proxy env).
+- Creating a connected site queues `discover_site`: safe homepage fetch → title,
+  description, favicon/logo, theme color stored as `Site.discovery` snapshot.
+  `POST /api/v1/sites/<id>/discover/` re-runs it.
+- Ownership: `POST /api/v1/sites/<id>/verify/` (`meta` HTML tag or `dns` TXT
+  `cms-verify=TOKEN`) runs `verify_site_ownership`; success audits a `verified` row.
+- Progress streams over WebSocket `ws/sites/<id>/progress/` (JWT `?token=`, admin
+  only): started → fetching → completed/failed, verifying → verified/failed.
+- UI at `/websites/:id/verify`: discovery snapshot, copy-paste meta snippet + DNS
+  record, verify buttons, live progress feed. Row “Verify” action + auto-navigate
+  after adding a connected site.
+
 Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
 (`docker compose down -v && docker compose up -d`). Not needed going forward.
 

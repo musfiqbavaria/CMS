@@ -13,6 +13,7 @@ class AuditLog(models.Model):
         DELETED = "deleted", "Deleted"
         ACTIVATED = "activated", "Activated"
         DEACTIVATED = "deactivated", "Deactivated"
+        VERIFIED = "verified", "Verified"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

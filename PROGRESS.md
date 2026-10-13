@@ -4,6 +4,21 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 4 — Connect by Domain (done)
+- `apps/core/ssrf.py`: scheme/port/credential checks, DNS + public-IP enforcement,
+  per-redirect-hop re-validation, size/hop limits, proxy-env bypass. 13 SSRF tests.
+- `discover_site` task (auto-queued on connected-site create, retry-on-transient):
+  title/description/favicon/logo/theme snapshot on `Site`; `discover` endpoint (202).
+- `verify_site_ownership` task: meta-tag compare or apex TXT `cms-verify=TOKEN`
+  lookup; success sets verified + audit row; `verify` endpoint (202).
+- `SiteProgressConsumer` (`ws/sites/<id>/progress/`, JWT query auth, admin-only)
+  with stage events; `useSiteProgress` hook; Verify page with copy snippets,
+  per-method verify buttons, live feed; row Verify action.
+- Tests: 11 connect tests (queue-on-create, parse, meta/DNS pos+neg, task store,
+  endpoints, socket auth gate). Full suite: 47 pytest, 7 vitest, lint + build clean.
+- E2E: real example.com discovery via worker (snapshot stored), private-IP site
+  fails with non-public message, live negative meta-verify, WS stage stream.
+
 ### Phase 3 — Websites Management (done)
 - `Site` model + migration (unique domain/site_key, type/status/mode/verification,
   created_by, indexes). `AuditLog` model + migration (actor/action/site snapshot,
@@ -79,5 +94,5 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 4 — Connect by Domain (URL normalize/validate, SSRF guard, discovery +
-  verification tasks with WS progress, verification UI).
+- Phase 5 — Site Editor, Versions & Live Preview (SiteConfig/ConfigVersion,
+  all editor tabs, media upload, draft/publish/rollback, preview iframe).

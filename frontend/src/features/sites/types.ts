@@ -3,6 +3,8 @@ export type SiteStatus = "pending" | "active" | "inactive";
 export type VerificationStatus = "pending" | "verified" | "failed";
 export type IntegrationMode = "connector" | "proxy";
 
+export type DiscoveryStatus = "pending" | "running" | "succeeded" | "failed";
+
 export interface Site {
   id: number;
   name: string;
@@ -12,6 +14,14 @@ export interface Site {
   status: SiteStatus;
   integration_mode: IntegrationMode;
   verification_status: VerificationStatus;
+  verification_token: string;
+  verification_method: string;
+  verification_error: string;
+  verified_at: string | null;
+  discovery: Record<string, string | number>;
+  discovery_status: DiscoveryStatus;
+  discovery_error: string;
+  discovered_at: string | null;
   created_by: number | null;
   created_by_username: string | null;
   created_at: string;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   useBulkSites,
   useCreateSite,
@@ -30,6 +31,7 @@ function serverMessage(err: unknown): string {
 type SortKey = "name" | "domain" | "created_at";
 
 export default function SitesPage({ startWithNew = false }: { startWithNew?: boolean }) {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchInput, setSearchInput] = useState("");
@@ -116,8 +118,12 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
       createSite.mutate(values, {
         onSuccess: (site) => {
           setFormOpen(false);
-          setPage(1);
-          setBanner({ kind: "ok", text: `Added ${site.domain}.` });
+          if (site.type === "connected") {
+            navigate(`/websites/${site.id}/verify`);
+          } else {
+            setPage(1);
+            setBanner({ kind: "ok", text: `Added ${site.domain}.` });
+          }
         },
         onError: (e) => setFormError(serverMessage(e)),
       });
@@ -312,6 +318,11 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
                     <td className="py-2 text-right">
                       <div className="inline-flex flex-wrap justify-end gap-1">
                         <button onClick={() => openEdit(site)} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Edit</button>
+                        {site.type === "connected" && (
+                          <Link to={`/websites/${site.id}/verify`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">
+                            Verify
+                          </Link>
+                        )}
                         <button onClick={() => toggleStatus(site)} className="rounded border px-2 py-1 text-xs dark:border-slate-600">
                           {site.status === "active" ? "Deactivate" : "Activate"}
                         </button>

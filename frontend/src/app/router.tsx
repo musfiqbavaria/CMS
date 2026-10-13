@@ -5,6 +5,7 @@ import LoginPage from "../features/auth/pages/LoginPage";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import SitesPage from "../features/sites/pages/SitesPage";
+import VerifyPage from "../features/sites/pages/VerifyPage";
 import StubPage from "../shared/ui/StubPage";
 
 export const router = createBrowserRouter([
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
           { path: "/", element: <DashboardPage /> },
           { path: "/websites", element: <SitesPage /> },
           { path: "/websites/new", element: <SitesPage startWithNew /> },
+          { path: "/websites/:id/verify", element: <VerifyPage /> },
           { path: "/builder/pages", element: <StubPage title="Pages" phase={7} /> },
           { path: "/builder/sections", element: <StubPage title="Sections" phase={7} /> },
           { path: "/builder/themes", element: <StubPage title="Themes" phase={7} /> },

@@ -32,6 +32,11 @@ def create_site(
         after=_snapshot(site),
         ip_address=client_ip(request),
     )
+    if site.type == Site.Types.CONNECTED:
+        # Local import avoids a tasks -> services import cycle.
+        from .tasks import discover_site
+
+        transaction.on_commit(lambda: discover_site.delay(site.pk))
     return site
 
 

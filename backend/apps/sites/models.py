@@ -59,6 +59,13 @@ class Site(models.Model):
     verification_token = models.CharField(
         max_length=64, default=generate_verification_token, editable=False
     )
+    verification_method = models.CharField(max_length=8, blank=True, default="")
+    verification_error = models.TextField(blank=True, default="")
+    verified_at = models.DateTimeField(null=True, blank=True)
+    discovery = models.JSONField(default=dict, blank=True)
+    discovery_status = models.CharField(max_length=16, default="pending")
+    discovery_error = models.TextField(blank=True, default="")
+    discovered_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,

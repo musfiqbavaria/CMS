@@ -18,6 +18,18 @@ export function useSites(params: SiteListParams) {
   return useQuery({ queryKey: ["sites", params], queryFn: () => fetchSites(params), placeholderData: keepPreviousData });
 }
 
+export function fetchSite(id: number): Promise<Site> {
+  return api.get<Site>(`/v1/sites/${id}/`).then((r) => r.data);
+}
+
+export function useSite(id: number | null) {
+  return useQuery({
+    queryKey: ["site", id],
+    queryFn: () => fetchSite(id as number),
+    enabled: id !== null,
+  });
+}
+
 export function useCreateSite() {
   const qc = useQueryClient();
   return useMutation({
@@ -69,8 +81,7 @@ export function useBulkSites() {
   });
 }
 
-export function fetchSiteLogs(siteId: number): Promise<Paged<AuditEntry>> {
-  return api.get<Paged<AuditEntry>>(`/v1/audit/logs/?site=${siteId}`).then((r) => r.data);
+export function fetchSiteLogs(siteId: number): Promise<Paged<AuditEntry>> {  return api.get<Paged<AuditEntry>>(`/v1/audit/logs/?site=${siteId}`).then((r) => r.data);
 }
 
 export function useSiteLogs(siteId: number | null) {
