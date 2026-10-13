@@ -4,6 +4,21 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 1 — Authentication & Access Control (done)
+- Custom `User` (`accounts`): roles, TOTP secret/flag, lockout fields; migration `0001_initial`.
+- JWT session: access in memory, rotating refresh in httpOnly cookie (`Secure` in prod),
+  blacklist on rotation/logout (`token_blacklist` app migrated).
+- Lockout after 5 bad passwords (423, 15 min, env-tunable) + `LoginRateThrottle` 10/min.
+- TOTP 2FA: setup/confirm/disable + two-step login via 15-min signed token.
+- Password reset via email (console backend dev): request (always 200) + confirm.
+- Default-deny DRF permissions (`IsAuthenticated` + `IsAdminUser`); health/connector/auth
+  endpoints explicitly public; `/api/docs/` + `/api/schema/` admin-only.
+- Frontend: axios client with refresh interceptor, zustand auth store (memory-only token),
+  `/login` (incl. 2FA step), `/reset-password`, `ProtectedRoute` gate, session bootstrap.
+  Temporary landing page stands in for the Phase 2 admin shell (clearly marked).
+- Tests: 11 pytest auth tests (gates, lockout, rotation-reuse, logout, 2FA, reset),
+  2 vitest tests (ProtectedRoute). Backend flake8/black/isort + eslint + `tsc+vite build` clean.
+
 ### Phase 0 — Foundation & Architecture Setup (done)
 - Repo scaffold: `backend/`, `frontend/`, `nginx/`, `docker/`, compose files, Makefile, CI skeleton.
 - Django settings split: `base` / `dev` / `prod`. ASGI + WSGI + Celery app wired.
@@ -35,5 +50,5 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 1 — Authentication & Access Control (custom User, JWT cookie rotation,
-  lockout, 2FA, default-deny permissions, login UI, protected routes).
+- Phase 2 — Admin Shell & Dashboard (AdminLayout sidebar/topbar, all menu routes,
+  real stats API with charts; replace TempHomePage).

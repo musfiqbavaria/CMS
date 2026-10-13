@@ -38,8 +38,26 @@ Open:
 - WS echo: `ws://localhost:8080/ws/echo/` (use `make ws-echo-test` or a WS client)
 - Django admin: http://localhost:8080/api/admin/ (user from `.env` superuser vars)
 
-## Commands (Makefile)
+## Authentication (Phase 1)
 
+- Custom `User` model (`apps.accounts`): roles `superadmin` / `admin`
+  (`editor` can be added later), TOTP 2FA fields, lockout counters.
+- JWT: access token (15 min) in memory, rotating refresh token (7 days) in an
+  httpOnly + `SameSite=Lax` cookie (`Secure` in prod). Rotation blacklists the old token.
+- Lockout: 5 failed logins → HTTP 423 for 15 minutes (`LOGIN_MAX_ATTEMPTS` /
+  `LOGIN_LOCKOUT_MINUTES`). Login also throttled to 10/min per IP.
+- Optional TOTP 2FA: `GET/POST /api/v1/auth/2fa/setup/`, step-2 `POST /api/v1/auth/2fa/login/`.
+- Password reset via email (console backend in dev): `POST /api/v1/auth/password-reset/`
+  then `/api/v1/auth/password-reset/confirm/`. Reset page: `/reset-password`.
+- Default-deny: every API requires auth + admin role except `/api/health/`,
+  `/api/v1/auth/login|refresh|password-reset*`, `/api/v1/auth/2fa/login/`,
+  `/connector/*`. API docs at `/api/docs/` are admin-only.
+- Login UI at `/login`; all other pages redirect there when unauthenticated.
+
+Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
+(`docker compose down -v && docker compose up -d`). Not needed going forward.
+
+## Commands (Makefile)
 | Command | What it does |
 |---|---|
 | `make up` / `make up-build` / `make down` | start / rebuild / stop dev stack |

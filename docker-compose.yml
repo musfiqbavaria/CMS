@@ -154,6 +154,7 @@ services:
     command: ["celery", "-A", "config", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
 
   frontend:
+    container_name: cms-frontend-app-1
     build:
       context: ./frontend
       dockerfile: ../docker/frontend.Dockerfile

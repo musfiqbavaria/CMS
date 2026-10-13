@@ -1,6 +1,7 @@
 """Base settings shared by dev and prod. Env-driven, no hardcoded secrets."""
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -28,6 +29,7 @@ INSTALLED_APPS = [
     "channels",
     "django_celery_beat",
     "drf_spectacular",
+    "rest_framework_simplejwt.token_blacklist",
     # Local
     "apps.core",
     "apps.accounts",
@@ -133,6 +135,13 @@ CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
+# --- Auth: custom user model (roles, lockout, TOTP 2FA) ---
+AUTH_USER_MODEL = "accounts.User"
+LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
+LOGIN_LOCKOUT_MINUTES = int(os.environ.get("LOGIN_LOCKOUT_MINUTES", "15"))
+TOTP_ISSUER = os.environ.get("TOTP_ISSUER", "CMS Platform")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8080")
+
 # --- Auth: default user model stays Django's until Phase 1 introduces custom User ---
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -161,9 +170,16 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# --- DRF: open in Phase 0 so /api/health/ is public; Phase 1 switches to default-deny ---
+# --- DRF: deny by default; public endpoints opt out with AllowAny ---
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+        "apps.core.permissions.IsAdminUser",
+    ],
+    "DEFAULT_THROTTLE_RATES": {"login": "10/min"},
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
@@ -172,6 +188,15 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 25,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+# --- SimpleJWT: access in memory (frontend), rotating refresh in httpOnly cookie ---
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 SPECTACULAR_SETTINGS = {
