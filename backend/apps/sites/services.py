@@ -37,6 +37,9 @@ def create_site(
         from .tasks import discover_site
 
         transaction.on_commit(lambda: discover_site.delay(site.pk))
+        from apps.connector.services import ensure_default_mappings
+
+        ensure_default_mappings(site)
     return site
 
 

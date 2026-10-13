@@ -1,4 +1,5 @@
 """Site editor business logic: drafts, versions, publish/rollback, media."""
+
 import copy
 
 from django.conf import settings
@@ -11,7 +12,7 @@ from PIL import Image
 from apps.audit.models import AuditLog
 from apps.audit.services import client_ip, log_action
 
-from .models import ConfigVersion, MediaAsset, SiteConfig
+from .models import ConfigVersion, SiteConfig
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "gif"}
 
@@ -34,7 +35,10 @@ def default_config(site) -> dict:
             "copyright": f"© {site.name}",
             "show_newsletter": False,
         },
-        "branding": {"logo_url": snap.get("logo_url", ""), "favicon_url": snap.get("favicon_url", "")},
+        "branding": {
+            "logo_url": snap.get("logo_url", ""),
+            "favicon_url": snap.get("favicon_url", ""),
+        },
         "cover": {"image_url": "", "overlay_opacity": 0.4},
         "hero": {
             "eyebrow": "",
@@ -53,7 +57,11 @@ def default_config(site) -> dict:
                 "background": "#ffffff",
                 "text": "#0f172a",
             },
-            "typography": {"heading_font": "system-ui", "body_font": "system-ui", "base_size": 16},
+            "typography": {
+                "heading_font": "system-ui",
+                "body_font": "system-ui",
+                "base_size": 16,
+            },
         },
         "seo": {
             "title": title,
@@ -62,12 +70,20 @@ def default_config(site) -> dict:
             "og_image": snap.get("logo_url", ""),
         },
         "custom": {"css": "", "js": ""},
-        "social": {"facebook": "", "x": "", "instagram": "", "linkedin": "", "youtube": ""},
+        "social": {
+            "facebook": "",
+            "x": "",
+            "instagram": "",
+            "linkedin": "",
+            "youtube": "",
+        },
     }
 
 
 def get_or_create_config(site) -> SiteConfig:
-    config, created = SiteConfig.objects.get_or_create(site=site, defaults={"draft": default_config(site)})
+    config, created = SiteConfig.objects.get_or_create(
+        site=site, defaults={"draft": default_config(site)}
+    )
     if created:
         return config
     if not config.draft:
@@ -125,13 +141,19 @@ def save_draft(*, actor, site, note="", request=None) -> ConfigVersion:
 
 
 @transaction.atomic
-def publish(*, actor, site, version_id=None, action="published", request=None) -> ConfigVersion:
+def publish(
+    *, actor, site, version_id=None, action="published", request=None
+) -> ConfigVersion:
     """Publish a version (latest draft by default). Archives the previous live one."""
     config = get_or_create_config(site)
     if version_id is not None:
         target = site.versions.get(pk=version_id)
     else:
-        target = site.versions.filter(status=ConfigVersion.Statuses.DRAFT).order_by("-version_no").first()
+        target = (
+            site.versions.filter(status=ConfigVersion.Statuses.DRAFT)
+            .order_by("-version_no")
+            .first()
+        )
         if target is None:
             target = ConfigVersion.objects.create(
                 site=site,
@@ -140,19 +162,28 @@ def publish(*, actor, site, version_id=None, action="published", request=None) -
                 status=ConfigVersion.Statuses.DRAFT,
                 author=actor,
             )
-    site.versions.filter(status=ConfigVersion.Statuses.PUBLISHED).exclude(pk=target.pk).update(
-        status=ConfigVersion.Statuses.ARCHIVED
-    )
+    site.versions.filter(status=ConfigVersion.Statuses.PUBLISHED).exclude(
+        pk=target.pk
+    ).update(status=ConfigVersion.Statuses.ARCHIVED)
     target.status = ConfigVersion.Statuses.PUBLISHED
     target.save(update_fields=["status"])
     config.published = copy.deepcopy(target.snapshot)
     config.published_version = target
     config.updated_by = actor
-    config.save(update_fields=["published", "published_version", "updated_by", "updated_at"])
-    # Purging the public connector cache happens in Phase 6; noted for later.
+    config.save(
+        update_fields=["published", "published_version", "updated_by", "updated_at"]
+    )
+    # Invalidate the public connector cache (purge runs after commit).
+    from apps.connector.tasks import purge_connector_cache
+
+    transaction.on_commit(lambda: purge_connector_cache.delay(site.pk))
     log_action(
         actor=actor,
-        action=AuditLog.Actions.PUBLISHED if action == "published" else AuditLog.Actions.ROLLED_BACK,
+        action=(
+            AuditLog.Actions.PUBLISHED
+            if action == "published"
+            else AuditLog.Actions.ROLLED_BACK
+        ),
         site=site,
         before={},
         after={"version_no": target.version_no},
@@ -163,7 +194,13 @@ def publish(*, actor, site, version_id=None, action="published", request=None) -
 
 
 def rollback(*, actor, site, version_id, request=None) -> ConfigVersion:
-    return publish(actor=actor, site=site, version_id=version_id, action="rolled_back", request=request)
+    return publish(
+        actor=actor,
+        site=site,
+        version_id=version_id,
+        action="rolled_back",
+        request=request,
+    )
 
 
 def reset_draft_to_published(*, actor, site) -> SiteConfig:
@@ -179,7 +216,9 @@ def validate_image_upload(upload: UploadedFile) -> dict:
     """Extension + size + real-image verification. Returns inspected metadata."""
     ext = (upload.name.rsplit(".", 1)[-1] if "." in upload.name else "").lower()
     if ext not in ALLOWED_IMAGE_EXTENSIONS:
-        raise ValidationError(f"Images only ({', '.join(sorted(ALLOWED_IMAGE_EXTENSIONS))}). No SVG.")
+        raise ValidationError(
+            f"Images only ({', '.join(sorted(ALLOWED_IMAGE_EXTENSIONS))}). No SVG."
+        )
     max_bytes = int(getattr(settings, "MEDIA_MAX_BYTES", 10 * 1024 * 1024))
     if upload.size and upload.size > max_bytes:
         raise ValidationError(f"File too large (>{max_bytes // (1024 * 1024)} MB).")

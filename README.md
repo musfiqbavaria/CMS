@@ -108,6 +108,20 @@ Open:
   upload + crop (aspect, zoom), live iframe preview, autosave status, version
   history with publish/rollback, reset-to-published, route + browser unsaved guards.
 
+## Connector & proxy (Phase 6)
+
+- Public delivery under `/connector/`: `GET v1/config/<site_key>/` (published only,
+  Redis-cached, ETag + `max-age=0, must-revalidate`, open CORS; custom CSS/JS only
+  for verified sites; inactive/unknown keys 404), `GET v1/loader.js?site=`, and
+  `GET v1/proxy/<site_key>/?path=` (proxy mode + verified only; injects
+  `<base>` + loader tag into origin HTML).
+- `loader.js` reads its own `?site=` (or `data-cms-site`), fetches config, and
+  applies header/logo/favicon/hero/footer/theme through admin-editable
+  `SelectorMapping` rows (`/websites/:id/mappings`, defaults seeded per site).
+- Publish/rollback/mapping changes queue `purge_connector_cache` (post-commit).
+- Setup page at `/websites/:id/setup`: copy-paste snippet, per-mode steps,
+  proxy limitations, update-flow explanation.
+
 Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
 (`docker compose down -v && docker compose up -d`). Not needed going forward.
 

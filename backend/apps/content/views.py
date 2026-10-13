@@ -1,4 +1,5 @@
 """Thin editor views: config draft/version endpoints + media library."""
+
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
@@ -41,8 +42,12 @@ class SiteConfigViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=["patch"], url_path="draft")
     def patch_draft(self, request, site_pk=None):
         if not isinstance(request.data, dict):
-            return Response({"detail": "Object with config sections expected."}, status=400)
-        config = services.update_draft(actor=request.user, site=self.get_site(), patch=request.data)
+            return Response(
+                {"detail": "Object with config sections expected."}, status=400
+            )
+        config = services.update_draft(
+            actor=request.user, site=self.get_site(), patch=request.data
+        )
         return Response(SiteConfigSerializer(config).data)
 
     @action(detail=False, methods=["post"], url_path="save-draft")
@@ -50,38 +55,58 @@ class SiteConfigViewSet(viewsets.GenericViewSet):
         serializer = SaveDraftSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         version = services.save_draft(
-            actor=request.user, site=self.get_site(), note=serializer.validated_data.get("note", ""), request=request
+            actor=request.user,
+            site=self.get_site(),
+            note=serializer.validated_data.get("note", ""),
+            request=request,
         )
-        return Response(ConfigVersionSerializer(version).data, status=status.HTTP_201_CREATED)
+        return Response(
+            ConfigVersionSerializer(version).data, status=status.HTTP_201_CREATED
+        )
 
     @action(detail=False, methods=["post"], url_path="publish")
     def publish(self, request, site_pk=None):
         serializer = PublishSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         version = services.publish(
-            actor=request.user, site=self.get_site(),
-            version_id=serializer.validated_data.get("version_id"), request=request,
+            actor=request.user,
+            site=self.get_site(),
+            version_id=serializer.validated_data.get("version_id"),
+            request=request,
         )
         return Response(ConfigVersionSerializer(version).data)
 
     @action(detail=False, methods=["post"], url_path="reset-draft")
     def reset_draft(self, request, site_pk=None):
-        config = services.reset_draft_to_published(actor=request.user, site=self.get_site())
+        config = services.reset_draft_to_published(
+            actor=request.user, site=self.get_site()
+        )
         return Response(SiteConfigSerializer(config).data)
 
     @action(detail=False, methods=["get"], url_path="versions")
     def versions(self, request, site_pk=None):
         qs = ConfigVersion.objects.filter(site=self.get_site()).select_related("author")
         page = self.paginate_queryset(qs)
-        serializer = ConfigVersionSerializer(page if page is not None else qs, many=True)
+        serializer = ConfigVersionSerializer(
+            page if page is not None else qs, many=True
+        )
         if page is not None:
             return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
 
-    @action(detail=False, methods=["post"], url_path=r"versions/(?P<version_id>[0-9]+)/rollback")
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path=r"versions/(?P<version_id>[0-9]+)/rollback",
+    )
     def rollback(self, request, site_pk=None, version_id=None):
         try:
-            version = services.rollback(actor=request.user, site=self.get_site(), version_id=version_id, request=request)
+            version = services.rollback(
+                actor=request.user,
+                site=self.get_site(),
+                version_id=version_id,
+                request=request,
+            )
         except ConfigVersion.DoesNotExist:
             return Response({"detail": "Version not found."}, status=404)
         return Response(ConfigVersionSerializer(version).data)
@@ -129,7 +154,9 @@ class MediaAssetViewSet(
             size=meta["size"],
             uploaded_by=request.user,
         )
-        return Response(MediaAssetSerializer(asset, context={"request": request}).data, status=201)
+        return Response(
+            MediaAssetSerializer(asset, context={"request": request}).data, status=201
+        )
 
     def perform_destroy(self, instance):
         if instance.file:

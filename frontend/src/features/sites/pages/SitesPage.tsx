@@ -298,6 +298,7 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
                     <td className="py-2 text-right">
                       <div className="inline-flex flex-wrap justify-end gap-1">
                         <Link to={`/websites/${site.id}/edit`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Edit</Link>
+                        <Link to={`/websites/${site.id}/setup`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Setup</Link>
                         {site.type === "connected" && (
                           <Link to={`/websites/${site.id}/verify`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">
                             Verify

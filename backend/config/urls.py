@@ -14,6 +14,9 @@ urlpatterns = [
     path("api/v1/auth/", include("apps.accounts.urls")),
     path("api/v1/", include("apps.sites.urls")),
     path("api/v1/", include("apps.content.urls")),
+    path(
+        "api/v1/sites/<int:site_pk>/mappings/", include("apps.connector.mapping_urls")
+    ),
     path("api/v1/audit/", include("apps.audit.urls")),
     path("connector/", include("apps.connector.urls")),
     path(

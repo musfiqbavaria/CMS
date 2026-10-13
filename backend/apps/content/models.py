@@ -1,4 +1,5 @@
 """Site content: editable draft/published config, immutable versions, media assets."""
+
 from django.conf import settings
 from django.db import models
 
@@ -6,11 +7,17 @@ from django.db import models
 class SiteConfig(models.Model):
     """One row per site. `draft` is edited; `published` is what the world sees."""
 
-    site = models.OneToOneField("sites.Site", on_delete=models.CASCADE, related_name="config")
+    site = models.OneToOneField(
+        "sites.Site", on_delete=models.CASCADE, related_name="config"
+    )
     draft = models.JSONField(default=dict, blank=True)
     published = models.JSONField(default=dict, blank=True)
     published_version = models.ForeignKey(
-        "ConfigVersion", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+        "ConfigVersion",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
@@ -30,10 +37,14 @@ class ConfigVersion(models.Model):
         PUBLISHED = "published", "Published"
         ARCHIVED = "archived", "Archived"
 
-    site = models.ForeignKey("sites.Site", on_delete=models.CASCADE, related_name="versions")
+    site = models.ForeignKey(
+        "sites.Site", on_delete=models.CASCADE, related_name="versions"
+    )
     version_no = models.PositiveIntegerField()
     snapshot = models.JSONField(default=dict)
-    status = models.CharField(max_length=16, choices=Statuses.choices, default=Statuses.DRAFT)
+    status = models.CharField(
+        max_length=16, choices=Statuses.choices, default=Statuses.DRAFT
+    )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
     )
@@ -42,7 +53,9 @@ class ConfigVersion(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["site", "version_no"], name="unique_site_version_no")
+            models.UniqueConstraint(
+                fields=["site", "version_no"], name="unique_site_version_no"
+            )
         ]
         indexes = [models.Index(fields=["site", "-version_no"])]
         ordering = ["-version_no"]
@@ -55,7 +68,11 @@ class MediaAsset(models.Model):
     """Uploaded image. site=NULL means shared library visible to all sites."""
 
     site = models.ForeignKey(
-        "sites.Site", null=True, blank=True, on_delete=models.CASCADE, related_name="media"
+        "sites.Site",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="media",
     )
     file = models.ImageField(upload_to="media/%Y/%m/")
     alt = models.CharField(max_length=255, blank=True, default="")

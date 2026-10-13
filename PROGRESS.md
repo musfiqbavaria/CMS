@@ -4,6 +4,20 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 6 — Connector Script & Reverse Proxy (done)
+- `SelectorMapping` model/migration + admin CRUD (validation, unique per site/key,
+  reset-defaults, savepoint-safe duplicates); defaults seeded on site create.
+- Public config API (Redis cache + ETag/304 + CORS, verified-gated custom code),
+  static `loader.js` (self-locating site key, mapping-driven DOM overrides),
+  proxy demo view (`<base>` fix + loader injection, proxy-mode + verified gate).
+- `purge_connector_cache` task queued post-commit on publish/rollback/mapping edits.
+- Setup + Mappings pages, snippet util, SitesPage Setup action.
+- Tests: 9 pytest (gating, payload, ETag, verified code, purge-on-publish,
+  rollback freshness, loader, proxy, mappings) + 1 vitest (snippet).
+  Full suite: 62 pytest, 11 vitest, lint + build clean.
+- E2E: published config live; real loader.js applied to fixture HTML via jsdom
+  (headline/logo/CTA/footer changed); rollback changed payload + ETag immediately.
+
 ### Phase 5 — Site Editor, Versions & Live Preview (done)
 - `SiteConfig` + `ConfigVersion` + `MediaAsset` models/migrations; silent autosave,
   numbered drafts, publish-with-archive, rollback-as-republish, all audited.
@@ -105,5 +119,5 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 6 — Connector Script & Reverse Proxy (public config API with cache/ETag,
-  loader.js, selector mappings UI, setup page, proxy injection, purge on publish).
+- Phase 7 — Website Builder (pages/sections drag & drop, posts, menus, themes,
+  media library, basic e-commerce, SEO/sitemap, public renderer with domain routing).
