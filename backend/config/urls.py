@@ -6,6 +6,7 @@ from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from apps.builder import views_public
 from apps.core.permissions import IsAdminUser
 
 urlpatterns = [
@@ -14,6 +15,7 @@ urlpatterns = [
     path("api/v1/auth/", include("apps.accounts.urls")),
     path("api/v1/", include("apps.sites.urls")),
     path("api/v1/", include("apps.content.urls")),
+    path("api/v1/", include("apps.builder.urls")),
     path(
         "api/v1/sites/<int:site_pk>/mappings/", include("apps.connector.mapping_urls")
     ),
@@ -31,6 +33,14 @@ urlpatterns = [
         ),
         name="docs",
     ),
+    # Public built-site renderer (Host header selects the site). Last on purpose:
+    # more specific prefixes above always win.
+    path("sitemap.xml", views_public.sitemap, name="builder-sitemap"),
+    path("robots.txt", views_public.robots, name="builder-robots"),
+    path("blog/<slug:slug>/", views_public.post_detail, name="builder-post"),
+    path("shop/<slug:slug>/", views_public.product_detail, name="builder-product"),
+    path("<slug:slug>/", views_public.page_detail, name="builder-page"),
+    path("", views_public.home, name="builder-home"),
 ]
 
 if settings.DEBUG:

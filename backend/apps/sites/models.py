@@ -59,6 +59,13 @@ class Site(models.Model):
     verification_token = models.CharField(
         max_length=64, default=generate_verification_token, editable=False
     )
+    theme = models.ForeignKey(
+        "builder.Theme",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="sites",
+    )
     verification_method = models.CharField(max_length=8, blank=True, default="")
     verification_error = models.TextField(blank=True, default="")
     verified_at = models.DateTimeField(null=True, blank=True)

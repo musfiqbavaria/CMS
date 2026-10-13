@@ -4,6 +4,20 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 7 — Website Builder (done)
+- Builder models/migrations (themes, pages/sections, posts/taxonomy, menus,
+  products) + `Site.theme` FK. Built-site-only enforcement in serializers.
+- Admin CRUD APIs with nested explicit routes, section/menu reorder endpoints.
+- SSR renderer (10 section types, escaping, trusted-custom-html only) + Host-based
+  public routing (middleware + Nginx map; localhost still serves the SPA).
+- `generate_sitemap` task + sitemap/robots views (Redis-warmed).
+- Builder UI: site picker, pages, drag-reorder section editor, posts, menus,
+  themes, products, media library page.
+- Tests: 9 pytest (gate, pages/sections/reorder, render on mapped domain,
+  post+product flow, themes, sitemap/robots, task, menu reorder) + 2 vitest
+  (catalog parity, reorder helper). Full suite: 71 pytest, 13 vitest, lint +
+  build clean. E2E: published page + product rendered on mapped domain.
+
 ### Phase 6 — Connector Script & Reverse Proxy (done)
 - `SelectorMapping` model/migration + admin CRUD (validation, unique per site/key,
   reset-defaults, savepoint-safe duplicates); defaults seeded on site create.
@@ -119,5 +133,5 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 7 — Website Builder (pages/sections drag & drop, posts, menus, themes,
-  media library, basic e-commerce, SEO/sitemap, public renderer with domain routing).
+- Phase 8 — Monitoring, Notifications & Audit (Beat schedules, health checks,
+  SSL/connector checks, WS notifications, audit UI, Users & Roles page).

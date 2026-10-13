@@ -7,6 +7,14 @@ import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import EditorPage from "../features/editor/pages/EditorPage";
 import MappingsPage from "../features/connector/pages/MappingsPage";
 import SetupPage from "../features/connector/pages/SetupPage";
+import MediaPage from "../features/builder/pages/MediaPage";
+import MenusPage from "../features/builder/pages/MenusPage";
+import PageEditorPage from "../features/builder/pages/PageEditorPage";
+import PagesPage from "../features/builder/pages/PagesPage";
+import PostsPage from "../features/builder/pages/PostsPage";
+import ProductsPage from "../features/builder/pages/ProductsPage";
+import SectionsPage from "../features/builder/pages/SectionsPage";
+import ThemesPage from "../features/builder/pages/ThemesPage";
 import SitesPage from "../features/sites/pages/SitesPage";
 import VerifyPage from "../features/sites/pages/VerifyPage";
 import StubPage from "../shared/ui/StubPage";
@@ -27,12 +35,15 @@ export const router = createBrowserRouter([
           { path: "/websites/:id/edit", element: <EditorPage /> },
           { path: "/websites/:id/setup", element: <SetupPage /> },
           { path: "/websites/:id/mappings", element: <MappingsPage /> },
-          { path: "/builder/pages", element: <StubPage title="Pages" phase={7} /> },
-          { path: "/builder/sections", element: <StubPage title="Sections" phase={7} /> },
-          { path: "/builder/themes", element: <StubPage title="Themes" phase={7} /> },
-          { path: "/builder/menus", element: <StubPage title="Menus" phase={7} /> },
-          { path: "/media", element: <StubPage title="Media Library" phase={5} /> },
-          { path: "/templates", element: <StubPage title="Templates" phase={7} /> },
+          { path: "/builder/pages", element: <PagesPage /> },
+          { path: "/builder/pages/:pageId", element: <PageEditorPage /> },
+          { path: "/builder/sections", element: <SectionsPage /> },
+          { path: "/builder/themes", element: <ThemesPage /> },
+          { path: "/builder/menus", element: <MenusPage /> },
+          { path: "/builder/posts", element: <PostsPage /> },
+          { path: "/builder/products", element: <ProductsPage /> },
+          { path: "/media", element: <MediaPage /> },
+          { path: "/templates", element: <ThemesPage /> },
           { path: "/monitoring", element: <StubPage title="Monitoring" phase={8} /> },
           { path: "/audit", element: <StubPage title="Audit Logs" phase={8} /> },
           { path: "/users", element: <StubPage title="Users & Roles" phase={8} /> },

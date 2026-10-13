@@ -122,6 +122,20 @@ Open:
 - Setup page at `/websites/:id/setup`: copy-paste snippet, per-mode steps,
   proxy limitations, update-flow explanation.
 
+## Website builder (Phase 7)
+
+- Models: Theme (2 seeded builtins), Page/Section (10 types), Post + categories/tags,
+  Menu/MenuItem, Product (+categories, variants, stock). Slugs auto-generated per site.
+- Admin API under `/api/v1/sites/<id>/builder/` (built sites only): pages, sections
+  (+reorder), posts/taxonomy, menus/items (+reorder), products/categories, themes,
+  theme assignment. Media library page backed by the Phase 5 upload API.
+- Public SSR renderer with Host-header routing (`BuilderDomainMiddleware` +
+  Nginx host map): `/`, `/<slug>/`, `/blog/<slug>/`, `/shop/<slug>/`,
+  `/sitemap.xml`, `/robots.txt`. Sitemap warming via `generate_sitemap` task.
+- Builder UI: site picker, pages + per-page section editor (typed fields, HTML5
+  drag reorder, enable toggles), posts, menus, themes gallery + assign, products
+  with variants/stock, cross-page sections list.
+
 Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
 (`docker compose down -v && docker compose up -d`). Not needed going forward.
 
