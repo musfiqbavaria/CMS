@@ -7,7 +7,7 @@ import type { Paged } from "../../sites/types";
 function useAllMedia() {
   return useQuery({
     queryKey: ["media-all"],
-    queryFn: () => api.get<Paged<MediaAsset>>("/v1/media/?page_size=100").then((r) => r.data),
+    queryFn: () => api.get<Paged<MediaAsset>>("/media/?page_size=100").then((r) => r.data),
   });
 }
 
@@ -26,7 +26,7 @@ export default function MediaPage() {
       const form = new FormData();
       form.append("file", file);
       form.append("alt", alt);
-      await api.post("/v1/media/", form, { headers: { "Content-Type": "multipart/form-data" } });
+      await api.post("/media/", form, { headers: { "Content-Type": "multipart/form-data" } });
       setAlt("");
       refetch();
     } catch {
@@ -37,7 +37,7 @@ export default function MediaPage() {
   }
 
   async function onDelete(id: number) {
-    await api.delete(`/v1/media/${id}/`);
+    await api.delete(`/media/${id}/`);
     qc.invalidateQueries({ queryKey: ["media-all"] });
     qc.invalidateQueries({ queryKey: ["media"] });
   }
