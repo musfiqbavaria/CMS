@@ -10,12 +10,13 @@ def log_action(
     site=None,
     before: dict | None = None,
     after: dict | None = None,
-    ip_address=None
+    ip_address=None,
+    model: str = "site",
 ) -> AuditLog:
     return AuditLog.objects.create(
         actor=actor,
         action=action,
-        model="site",
+        model=model,
         object_id=str(site.pk) if site else "",
         site=site,
         site_display=site.domain if site else "",

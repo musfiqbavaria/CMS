@@ -222,6 +222,9 @@ EMAIL_BACKEND = os.environ.get(
 )
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
 
+# --- Uploads ---
+MEDIA_MAX_BYTES = int(os.environ.get("MEDIA_MAX_BYTES", str(10 * 1024 * 1024)))
+
 # --- Sentry (optional) ---
 if os.environ.get("SENTRY_DSN"):
     import sentry_sdk

@@ -178,8 +178,9 @@ export default function VerifyPage() {
       <Card>
         <CardTitle>3 · Next steps</CardTitle>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-          After verification, editing (Phase 5) and the connector setup snippet (Phase 6) unlock for this site.
-          Integration mode selected: <strong>{site.integration_mode === "proxy" ? "Reverse proxy" : "Connector script"}</strong>.
+          Site verified? Open the <Link to={`/websites/${site.id}/edit`} className="underline">site editor</Link> to
+          change the header, logo, hero and more, then publish. Integration mode
+          selected: <strong>{site.integration_mode === "proxy" ? "Reverse proxy" : "Connector script"}</strong>.
         </p>
       </Card>
 

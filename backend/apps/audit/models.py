@@ -14,6 +14,8 @@ class AuditLog(models.Model):
         ACTIVATED = "activated", "Activated"
         DEACTIVATED = "deactivated", "Deactivated"
         VERIFIED = "verified", "Verified"
+        PUBLISHED = "published", "Published"
+        ROLLED_BACK = "rolled_back", "Rolled back"
 
     actor = models.ForeignKey(
         settings.AUTH_USER_MODEL,

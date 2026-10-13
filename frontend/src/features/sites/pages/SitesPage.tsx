@@ -6,7 +6,6 @@ import {
   useDeleteSite,
   useSetSiteStatus,
   useSites,
-  useUpdateSite,
 } from "../api";
 import type { Site, SiteListParams } from "../types";
 import type { SiteSchemaValues } from "../schemas";
@@ -42,7 +41,6 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [selection, setSelection] = useState<Set<number>>(new Set());
   const [formOpen, setFormOpen] = useState(startWithNew);
-  const [editing, setEditing] = useState<Site | null>(null);
   const [deleting, setDeleting] = useState<Site | null>(null);
   const [historySite, setHistorySite] = useState<Site | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -70,7 +68,6 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
 
   const { data, isLoading, isError, refetch } = useSites(params);
   const createSite = useCreateSite();
-  const updateSite = useUpdateSite(editing?.id ?? 0);
   const deleteSite = useDeleteSite();
   const setStatus = useSetSiteStatus();
   const bulk = useBulkSites();
@@ -93,41 +90,24 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
   }
 
   function openNew() {
-    setEditing(null);
-    setFormError(null);
-    setFormOpen(true);
-  }
-
-  function openEdit(site: Site) {
-    setEditing(site);
     setFormError(null);
     setFormOpen(true);
   }
 
   function submitForm(values: SiteSchemaValues) {
     setFormError(null);
-    if (editing) {
-      updateSite.mutate(values, {
-        onSuccess: () => {
-          setFormOpen(false);
-          setBanner({ kind: "ok", text: `Updated ${values.domain}.` });
-        },
-        onError: (e) => setFormError(serverMessage(e)),
-      });
-    } else {
-      createSite.mutate(values, {
-        onSuccess: (site) => {
-          setFormOpen(false);
-          if (site.type === "connected") {
-            navigate(`/websites/${site.id}/verify`);
-          } else {
-            setPage(1);
-            setBanner({ kind: "ok", text: `Added ${site.domain}.` });
-          }
-        },
-        onError: (e) => setFormError(serverMessage(e)),
-      });
-    }
+    createSite.mutate(values, {
+      onSuccess: (site) => {
+        setFormOpen(false);
+        if (site.type === "connected") {
+          navigate(`/websites/${site.id}/verify`);
+        } else {
+          setPage(1);
+          setBanner({ kind: "ok", text: `Added ${site.domain}.` });
+        }
+      },
+      onError: (e) => setFormError(serverMessage(e)),
+    });
   }
 
   function toggleStatus(site: Site) {
@@ -317,7 +297,7 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
                     <td className="py-2 pr-4 whitespace-nowrap">{new Date(site.created_at).toLocaleDateString()}</td>
                     <td className="py-2 text-right">
                       <div className="inline-flex flex-wrap justify-end gap-1">
-                        <button onClick={() => openEdit(site)} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Edit</button>
+                        <Link to={`/websites/${site.id}/edit`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Edit</Link>
                         {site.type === "connected" && (
                           <Link to={`/websites/${site.id}/verify`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">
                             Verify
@@ -356,8 +336,8 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
 
       <SiteFormModal
         open={formOpen}
-        site={editing}
-        busy={createSite.isPending || updateSite.isPending}
+        site={null}
+        busy={createSite.isPending}
         serverError={formError}
         onClose={() => setFormOpen(false)}
         onSubmit={submitForm}

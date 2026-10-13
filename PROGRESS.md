@@ -4,6 +4,17 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 5 — Site Editor, Versions & Live Preview (done)
+- `SiteConfig` + `ConfigVersion` + `MediaAsset` models/migrations; silent autosave,
+  numbered drafts, publish-with-archive, rollback-as-republish, all audited.
+- Upload validation (whitelist, size, Pillow verify); dev media serving via Django.
+- Editor UI: 12 tabs, media picker with crop, srcDoc live preview, autosave +
+  save/publish toolbar, version history, reset, unsaved guards (router + unload).
+- Tests: 6 pytest (seed, draft/publish/rollback incl. audit, versions list,
+  upload accept/reject ×3) + 3 vitest (dirty check, escaping, preview content).
+  Full suite: 53 pytest, 10 vitest, lint + build clean. E2E draft→publish→
+  rollback verified through Nginx with audit rows.
+
 ### Phase 4 — Connect by Domain (done)
 - `apps/core/ssrf.py`: scheme/port/credential checks, DNS + public-IP enforcement,
   per-redirect-hop re-validation, size/hop limits, proxy-env bypass. 13 SSRF tests.
@@ -94,5 +105,5 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 5 — Site Editor, Versions & Live Preview (SiteConfig/ConfigVersion,
-  all editor tabs, media upload, draft/publish/rollback, preview iframe).
+- Phase 6 — Connector Script & Reverse Proxy (public config API with cache/ETag,
+  loader.js, selector mappings UI, setup page, proxy injection, purge on publish).

@@ -94,6 +94,20 @@ Open:
   record, verify buttons, live progress feed. Row “Verify” action + auto-navigate
   after adding a connected site.
 
+## Site editor (Phase 5)
+
+- `SiteConfig` (draft + published JSON, published pointer) and immutable
+  `ConfigVersion` (numbered, draft/published/archived). Draft seeded from discovery.
+- `PATCH .../config/` autosaves silently (deep merge, no version noise);
+  `POST .../save-draft/` snapshots a version; `POST .../publish/` (or a version id)
+  archives the old live version and publishes; rollback republishes an old version.
+  All version transitions are audited (`published` / `rolled_back`).
+- `MediaAsset` library (per-site + shared): extension whitelist (no SVG), 10 MB cap,
+  Pillow verification + dimensions. `GET/POST/DELETE /api/v1/media/`.
+- Editor at `/websites/:id/edit`: 12 tabs (general → advanced), image picker with
+  upload + crop (aspect, zoom), live iframe preview, autosave status, version
+  history with publish/rollback, reset-to-published, route + browser unsaved guards.
+
 Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
 (`docker compose down -v && docker compose up -d`). Not needed going forward.
 
