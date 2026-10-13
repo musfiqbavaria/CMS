@@ -4,6 +4,22 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 3 — Websites Management (done)
+- `Site` model + migration (unique domain/site_key, type/status/mode/verification,
+  created_by, indexes). `AuditLog` model + migration (actor/action/site snapshot,
+  before/after JSON, survives site deletion).
+- Services-only writes (`sites/services.py` + `audit/services.py`); ViewSets stay thin.
+  CRUD + activate/deactivate + bulk endpoints; read-only audit API with filters.
+- Fixed two real bugs found by tests (bulk kwarg mismatch) and one by runtime
+  (DRF 3.18 dropped `PAGE_SIZE_QUERY_PARAM` → new `apps/core/pagination.py`).
+- Fixed Nginx stale-upstream-DNS outage (backend IP changed after restart):
+  dev+prod confs now use Docker DNS resolver with variable proxy targets.
+- Websites UI: search (debounced), filters, sorting, pagination, bulk bar,
+  Add/Edit/Delete/Activate modals, History modal, empty/loading/error states.
+- Tests: 9 pytest (CRUD, dup domain, audit before/after, delete retention, bulk,
+  filters) + 3 vitest (badges, domain schema). Full suite: 24 pytest, 7 vitest,
+  flake8/black/isort + eslint + build clean. E2E lifecycle verified via Nginx.
+
 ### Phase 2 — Admin Shell & Dashboard (done)
 - `AdminLayout`: collapsible desktop sidebar, mobile drawer, topbar (page search,
   dark/light mode persisted, notifications bell with honest empty state, profile
@@ -63,5 +79,5 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 3 — Websites Management (Site model + CRUD API, list UI with
-  search/filter/sort/pagination/bulk actions, audit logging).
+- Phase 4 — Connect by Domain (URL normalize/validate, SSRF guard, discovery +
+  verification tasks with WS progress, verification UI).

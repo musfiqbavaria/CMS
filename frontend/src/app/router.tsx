@@ -4,6 +4,7 @@ import ProtectedRoute from "../features/auth/components/ProtectedRoute";
 import LoginPage from "../features/auth/pages/LoginPage";
 import ResetPasswordPage from "../features/auth/pages/ResetPasswordPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import SitesPage from "../features/sites/pages/SitesPage";
 import StubPage from "../shared/ui/StubPage";
 
 export const router = createBrowserRouter([
@@ -16,8 +17,8 @@ export const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { path: "/", element: <DashboardPage /> },
-          { path: "/websites", element: <StubPage title="Websites" phase={3} hint="Connected + built site list with search, filters and bulk actions." /> },
-          { path: "/websites/new", element: <StubPage title="Add Website" phase={3} hint="Connect by domain or start building a new site." /> },
+          { path: "/websites", element: <SitesPage /> },
+          { path: "/websites/new", element: <SitesPage startWithNew /> },
           { path: "/builder/pages", element: <StubPage title="Pages" phase={7} /> },
           { path: "/builder/sections", element: <StubPage title="Sections" phase={7} /> },
           { path: "/builder/themes", element: <StubPage title="Themes" phase={7} /> },

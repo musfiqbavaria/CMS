@@ -1,0 +1,57 @@
+export type SiteType = "connected" | "built";
+export type SiteStatus = "pending" | "active" | "inactive";
+export type VerificationStatus = "pending" | "verified" | "failed";
+export type IntegrationMode = "connector" | "proxy";
+
+export interface Site {
+  id: number;
+  name: string;
+  domain: string;
+  site_key: string;
+  type: SiteType;
+  status: SiteStatus;
+  integration_mode: IntegrationMode;
+  verification_status: VerificationStatus;
+  created_by: number | null;
+  created_by_username: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Paged<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface AuditEntry {
+  id: number;
+  actor: number | null;
+  actor_username: string | null;
+  action: string;
+  model: string;
+  object_id: string;
+  site: number | null;
+  site_display: string;
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface SiteListParams {
+  page: number;
+  page_size: number;
+  search?: string;
+  type?: string;
+  status?: string;
+  ordering?: string;
+}
+
+export interface SiteFormValues {
+  name: string;
+  domain: string;
+  type: SiteType;
+  integration_mode: IntegrationMode;
+}

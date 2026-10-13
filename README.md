@@ -55,7 +55,6 @@ Open:
 - Login UI at `/login`; all other pages redirect there when unauthenticated.
 
 ## Admin shell & dashboard (Phase 2)
-
 - `AdminLayout`: collapsible sidebar (desktop) + drawer (mobile), topbar with
   page search, dark/light mode, notifications bell, profile menu with sign-out.
 - All sidebar routes exist: `/` Dashboard (live), the rest are clearly-marked
@@ -63,6 +62,20 @@ Open:
 - Dashboard API `GET /api/v1/stats/overview/` (admin-only, cached 45 s): user
   aggregates, signups-by-day chart data, beat schedule count, recent users,
   system status (db/redis/celery worker ping).
+
+## Websites (Phase 3)
+
+- `Site` model: name, unique domain, auto `site_key` + verification token,
+  type (connected/built), status (pending/active/inactive), integration mode,
+  verification status. Duplicate domains rejected (case/format normalized).
+- API `GET/POST /api/v1/sites/` (search, filter, ordering, pagination with
+  `page_size`), `PATCH/DELETE /api/v1/sites/<id>/`, `POST .../activate|deactivate`,
+  `POST /api/v1/sites/bulk/` (activate/deactivate/delete).
+- Every write creates an `AuditLog` row (actor, action, site, before/after JSON);
+  reads at `GET /api/v1/audit/logs/` (filter by site/actor/action).
+- UI at `/websites` (and `/websites/new` opens the Add modal): table with search,
+  type/status filters, sortable columns, pagination, row selection with bulk bar,
+  Add/Edit/Delete/Activate modals, per-site History modal.
 
 Note: Phase 1 switched `AUTH_USER_MODEL`, which required a one-time dev DB reset
 (`docker compose down -v && docker compose up -d`). Not needed going forward.
