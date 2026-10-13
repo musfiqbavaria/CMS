@@ -11,6 +11,10 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, trim_whitespace=False)
 
 
+class RefreshResponseSerializer(serializers.Serializer):
+    access = serializers.CharField()
+
+
 class TwoFactorChallengeSerializer(serializers.Serializer):
     two_fa_token = serializers.CharField()
     code = serializers.CharField(min_length=6, max_length=8)

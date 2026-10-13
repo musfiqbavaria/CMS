@@ -2,6 +2,8 @@
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -99,6 +101,7 @@ class PageViewSet(SiteScopedMixin, GenericViewSet):
 
 class SectionViewSet(SiteScopedMixin, GenericViewSet):
     serializer_class = SectionSerializer
+    queryset = Section.objects.all()
 
     def get_page(self) -> Page:
         return get_object_or_404(
@@ -113,6 +116,9 @@ class SectionViewSet(SiteScopedMixin, GenericViewSet):
     def list(self, request, site_pk=None, page_pk=None):
         sections = self.get_page().sections.all()
         return Response(SectionSerializer(sections, many=True).data)
+
+    def retrieve(self, request, site_pk=None, page_pk=None, pk=None):
+        return Response(SectionSerializer(self.get_section()).data)
 
     def create(self, request, site_pk=None, page_pk=None):
         page = self.get_page()
@@ -176,6 +182,9 @@ class _CrudViewSet(SiteScopedMixin, GenericViewSet):
     def list(self, request, site_pk=None):
         return Response(self.serializer_class(self.get_queryset(), many=True).data)
 
+    def retrieve(self, request, site_pk=None, pk=None):
+        return Response(self.serializer_class(self.get_queryset().get(pk=pk)).data)
+
     def create(self, request, site_pk=None):
         site = self.get_site()
         serializer = self.serializer_class(data=request.data, context={"site": site})
@@ -188,9 +197,6 @@ class _CrudViewSet(SiteScopedMixin, GenericViewSet):
         if m2m.get("tags") is not None:
             obj.tags.set(m2m["tags"])
         return Response(self.serializer_class(obj).data, status=201)
-
-    def retrieve(self, request, site_pk=None, pk=None):
-        return Response(self.serializer_class(self.get_queryset().get(pk=pk)).data)
 
     def partial_update(self, request, site_pk=None, pk=None):
         obj = self.get_queryset().get(pk=pk)
@@ -209,6 +215,7 @@ class _CrudViewSet(SiteScopedMixin, GenericViewSet):
 class PostViewSet(_CrudViewSet):
     model = Post
     serializer_class = PostSerializer
+    queryset = Post.objects.all()
     extra_list_filters = {"status": "status", "category": "category_id"}
 
     def get_queryset(self):
@@ -220,6 +227,7 @@ class PostViewSet(_CrudViewSet):
 class MenuViewSet(_CrudViewSet):
     model = Menu
     serializer_class = MenuSerializer
+    queryset = Menu.objects.all()
 
     def get_queryset(self):
         return super().get_queryset().prefetch_related("items")
@@ -228,6 +236,7 @@ class MenuViewSet(_CrudViewSet):
 class ProductViewSet(_CrudViewSet):
     model = Product
     serializer_class = ProductSerializer
+    queryset = Product.objects.all()
     extra_list_filters = {"status": "status", "category": "category_id"}
 
     def get_queryset(self):
@@ -248,26 +257,34 @@ class SimpleViewSet(_CrudViewSet):
 class PostCategoryViewSet(SimpleViewSet):
     model = PostCategory
     serializer_class = PostCategorySerializer
+    queryset = PostCategory.objects.all()
 
 
 class TagViewSet(SimpleViewSet):
     model = Tag
     serializer_class = TagSerializer
+    queryset = Tag.objects.all()
 
 
 class ProductCategoryViewSet(SimpleViewSet):
     model = ProductCategory
     serializer_class = ProductCategorySerializer
+    queryset = ProductCategory.objects.all()
 
 
 class MenuItemViewSet(SiteScopedMixin, GenericViewSet):
     serializer_class = MenuItemSerializer
+    queryset = MenuItem.objects.all()
 
     def get_menu(self) -> Menu:
         return get_object_or_404(Menu, pk=self.kwargs["menu_pk"], site=self.get_site())
 
     def list(self, request, site_pk=None, menu_pk=None):
         return Response(MenuItemSerializer(self.get_menu().items.all(), many=True).data)
+
+    def retrieve(self, request, site_pk=None, menu_pk=None, pk=None):
+        item = get_object_or_404(MenuItem, pk=pk, menu=self.get_menu())
+        return Response(MenuItemSerializer(item).data)
 
     def create(self, request, site_pk=None, menu_pk=None):
         menu = self.get_menu()
@@ -324,7 +341,15 @@ class ThemeViewSet(GenericViewSet):
         return Response(ThemeSerializer(get_object_or_404(Theme, pk=pk)).data)
 
 
+class SiteThemeSerializer(serializers.Serializer):
+    theme = serializers.IntegerField(allow_null=True)
+    theme_name = serializers.CharField(allow_null=True)
+
+
 class SiteThemeView(SiteScopedMixin, GenericViewSet):
+    serializer_class = SiteThemeSerializer
+
+    @extend_schema(responses={200: SiteThemeSerializer})
     def current(self, request, site_pk=None):
         site = self.get_site()
         return Response(
@@ -334,6 +359,7 @@ class SiteThemeView(SiteScopedMixin, GenericViewSet):
             }
         )
 
+    @extend_schema(responses={200: SiteThemeSerializer})
     def assign(self, request, site_pk=None):
         site = self.get_site()
         theme = get_object_or_404(Theme, pk=request.data.get("theme"))

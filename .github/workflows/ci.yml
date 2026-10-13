@@ -7,6 +7,16 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,15 +27,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
       - name: Lint (flake8)
-        run: flake8 backend/config backend/apps
+        run: cd backend && flake8 config apps
       - name: Lint (black --check)
-        run: black --check backend/config backend/apps
+        run: cd backend && black --check config apps
       - name: Lint (isort --check)
-        run: isort --check-only backend/config backend/apps
+        run: cd backend && isort --check-only config apps
       - name: Test
         env:
           DJANGO_SETTINGS_MODULE: config.settings.dev
           DATABASE_URL: sqlite:///db.sqlite3
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_BROKER_URL: redis://localhost:6379/1
+          CELERY_RESULT_BACKEND: redis://localhost:6379/2
         run: |
           cd backend
           pytest -q
@@ -41,5 +54,7 @@ jobs:
         run: cd frontend && npm ci
       - name: Lint
         run: cd frontend && npm run lint
+      - name: Test
+        run: cd frontend && npm test
       - name: Build
         run: cd frontend && npm run build

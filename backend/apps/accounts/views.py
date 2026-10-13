@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -15,6 +16,7 @@ from .serializers import (
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    RefreshResponseSerializer,
     TwoFactorChallengeSerializer,
     TwoFactorDisableSerializer,
     TwoFactorSetupConfirmSerializer,
@@ -69,6 +71,7 @@ def locked_response():
 
 
 class LoginView(APIView):
+    serializer_class = LoginSerializer
     permission_classes = [AllowAny]
     throttle_classes = [LoginRateThrottle]
 
@@ -115,6 +118,7 @@ class LoginView(APIView):
 
 
 class TwoFactorLoginView(APIView):
+    serializer_class = TwoFactorChallengeSerializer
     """Step 2 of login for 2FA-enabled accounts. Also rate limited."""
 
     permission_classes = [AllowAny]
@@ -142,6 +146,7 @@ class TwoFactorLoginView(APIView):
 
 
 class RefreshView(APIView):
+    serializer_class = RefreshResponseSerializer
     """Rotate the refresh token from the httpOnly cookie (access stays in memory)."""
 
     permission_classes = [AllowAny]
@@ -168,6 +173,7 @@ class RefreshView(APIView):
 
 
 class LogoutView(APIView):
+    @extend_schema(request=None, responses={204: None})
     def post(self, request):
         raw = request.COOKIES.get(REFRESH_COOKIE)
         if raw:
@@ -181,6 +187,8 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
+    serializer_class = UserSerializer
+
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
@@ -192,6 +200,8 @@ class MeView(APIView):
 
 
 class ChangePasswordView(APIView):
+    serializer_class = ChangePasswordSerializer
+
     def post(self, request):
         serializer = ChangePasswordSerializer(
             data=request.data, context={"request": request}
@@ -206,6 +216,7 @@ class ChangePasswordView(APIView):
 
 
 class TwoFactorSetupView(APIView):
+    serializer_class = TwoFactorSetupConfirmSerializer
     """GET: provisioning details (generates a secret until confirmed).
     POST {code}: verify the code and enable 2FA."""
 
@@ -238,6 +249,8 @@ class TwoFactorSetupView(APIView):
 
 
 class TwoFactorDisableView(APIView):
+    serializer_class = TwoFactorDisableSerializer
+
     def post(self, request):
         serializer = TwoFactorDisableSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -251,6 +264,7 @@ class TwoFactorDisableView(APIView):
 
 
 class PasswordResetRequestView(APIView):
+    serializer_class = PasswordResetRequestSerializer
     """Always 200: never reveal whether an email is registered."""
 
     permission_classes = [AllowAny]
@@ -273,6 +287,7 @@ class PasswordResetRequestView(APIView):
 
 
 class PasswordResetConfirmView(APIView):
+    serializer_class = PasswordResetConfirmSerializer
     permission_classes = [AllowAny]
 
     def post(self, request):

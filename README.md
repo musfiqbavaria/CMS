@@ -180,6 +180,15 @@ Prod Nginx image (`docker/nginx.Dockerfile`) builds the React `dist/` and serves
 as static files; `/static/` + `/media/` are served from named volumes populated by
 `backend` collectstatic.
 
+Hardening notes (Phase 9):
+- Use `DJANGO_DEBUG=False`, `DJANGO_SETTINGS_MODULE=config.settings.prod`, and
+  strong secrets; TLS termination happens at Nginx.
+- Browser security headers and HSTS are configured in `nginx/nginx.conf`; the
+  frontend bundle is route-split for reload performance.
+- Production health check: `curl http://<host>/api/health/` through Nginx.
+- Consolidated scheduler handles uptime, SSL, connector, sitemap, backup, and
+  cleanup jobs.
+
 ## Repo layout
 
 ```

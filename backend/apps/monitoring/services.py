@@ -6,15 +6,72 @@ import time
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.core.cache import cache
 from django.utils import timezone
 
-from apps.core.ssrf import UnsafeURLError, safe_fetch
+from apps.core.ssrf import UnsafeURLError, safe_fetch, validate_public_url
 from apps.sites.models import Site
 
 from .models import HealthCheck, Notification
 
 NOTIFY_GROUP = "admin_notifications"
 SSL_WARN_DAYS = 14
+SUMMARY_CACHE_KEY = "monitoring:summary"
+SUMMARY_CACHE_TTL = 30
+
+
+def monitoring_summary() -> list:
+    """One row per active site with the latest check of each type.
+
+    Bounded single-pass query (no per-site N+1), cached briefly.
+    """
+    cached = cache.get(SUMMARY_CACHE_KEY)
+    if cached is not None:
+        return cached
+    sites = list(Site.objects.filter(status=Site.Statuses.ACTIVE).order_by("name"))
+    latest: dict = {}
+    if sites:
+        checks = (
+            HealthCheck.objects.filter(site__in=[s.pk for s in sites])
+            .order_by("site_id", "check_type", "-checked_at")
+            .values(
+                "site_id", "check_type", "status", "checked_at", "response_ms", "detail"
+            )[:2000]
+        )
+        for check in checks:
+            key = (check["site_id"], check["check_type"])
+            if key not in latest:
+                latest[key] = check
+    rows = []
+    for site in sites:
+        per_type = {}
+        for check_type, _ in HealthCheck.Types.choices:
+            check = latest.get((site.pk, check_type))
+            per_type[check_type] = (
+                {
+                    "status": check["status"],
+                    "checked_at": check["checked_at"],
+                    "response_ms": check["response_ms"],
+                    "detail": check["detail"],
+                }
+                if check
+                else None
+            )
+        states = [v["status"] for v in per_type.values() if v]
+        rows.append(
+            {
+                "site": site.pk,
+                "name": site.name,
+                "domain": site.domain,
+                "type": site.type,
+                "checks": per_type,
+                "overall": (
+                    "fail" if "fail" in states else ("ok" if states else "unknown")
+                ),
+            }
+        )
+    cache.set(SUMMARY_CACHE_KEY, rows, SUMMARY_CACHE_TTL)
+    return rows
 
 
 def last_status(site, check_type: str) -> str | None:
@@ -27,13 +84,15 @@ def last_status(site, check_type: str) -> str | None:
 def record_check(
     site, check_type: str, ok: bool, detail: dict, response_ms=None
 ) -> HealthCheck:
-    return HealthCheck.objects.create(
+    check = HealthCheck.objects.create(
         site=site,
         check_type=check_type,
         status=HealthCheck.Statuses.OK if ok else HealthCheck.Statuses.FAIL,
         detail=detail,
         response_ms=response_ms,
     )
+    cache.delete(SUMMARY_CACHE_KEY)
+    return check
 
 
 def push_notification(notification: Notification) -> None:
@@ -102,6 +161,10 @@ def check_ssl(site: Site) -> HealthCheck:
     """Read the TLS certificate. Fail notifies; <14 days warns."""
     host = site.domain
     try:
+        validate_public_url(f"https://{host}")
+    except UnsafeURLError as exc:
+        return record_check(site, HealthCheck.Types.SSL, False, {"error": str(exc)})
+    try:
         context = ssl.create_default_context()
         with socket.create_connection((host, 443), timeout=10) as sock:
             with context.wrap_socket(sock, server_hostname=host) as secure:
@@ -109,8 +172,6 @@ def check_ssl(site: Site) -> HealthCheck:
         days = days_until(cert_expiry_seconds(cert))
         ok = days >= 0
         detail: dict = {"days_left": days}
-    except UnsafeURLError as exc:  # pragma: no cover - defensive; domain pre-validated
-        return record_check(site, HealthCheck.Types.SSL, False, {"error": str(exc)})
     except Exception as exc:
         check = record_check(
             site, HealthCheck.Types.SSL, False, {"error": f"TLS failed: {exc}"}

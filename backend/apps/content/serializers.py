@@ -96,7 +96,7 @@ class MediaAssetSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
-    def get_url(self, obj):
+    def get_url(self, obj) -> str:
         request = self.context.get("request")
         url = obj.file.url if obj.file else ""
         if request is not None and url:

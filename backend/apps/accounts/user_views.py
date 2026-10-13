@@ -5,7 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, status, viewsets
 from rest_framework.response import Response
 
-from .user_serializers import UserCreateSerializer, UserSerializer
+from .user_serializers import AdminUserSerializer, UserCreateSerializer
 
 User = get_user_model()
 
@@ -23,13 +23,13 @@ class UserViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_serializer_class(self):
-        return UserCreateSerializer if self.action == "create" else UserSerializer
+        return UserCreateSerializer if self.action == "create" else AdminUserSerializer
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserSerializer(user).data, status=201)
+        return Response(AdminUserSerializer(user).data, status=201)
 
     def partial_update(self, request, *args, **kwargs):
         target = self.get_object()

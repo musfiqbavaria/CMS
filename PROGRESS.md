@@ -4,7 +4,7 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
-### Phase 8 — Monitoring, Notifications & Audit (done)
+### Phase 9 - Production Readiness (done)\n- Deploy check now clean: fixed missing DRF `retrieve` actions and schema hints so `manage.py check --deploy` has only SSL-redirect W008 (TLS at Nginx).\n- Security/headers: HSTS + browser security/CSP headers in Nginx; .env secrets ignored; `.env.example` documents auth/upload/retention knobs.\n- Performance: monitoring summary uses a single-pass bounded query (no N+1), cached 30s and invalidated on new check; public connector/admin paths unaffected.\n- Frontend bundle split with route/lazy loading (main bundle ~435 KB vs previous ~959 KB); Nginx serves immutable `/assets` chunks.\n- CI: Redis service + DBURL/env for monitoring socket tests; frontend lint/test/build added; paths run from `backend/`.\n- Prod routing: host-aware Nginx map (`$serve_spa`) restores customer-domain rendering while serving SPA on CMS host; prod RSA/IP stale-DNS mitigation retained.\n- Smoke: production Compose project builds and boots; `/api/health/` 200 through Nginx; backend 81 pytest + 14 vitest + lint/build green.\n\n### Phase 8 - Monitoring, Notifications & Audit (done)
 - `HealthCheck` + `Notification` models/migrations; uptime/SSL/connector services
   with transition-only notifications; `ws/notifications/` socket + frontend hook
   feeding the bell; Beat DB schedules migration (6 jobs); dumpdata backups with
@@ -150,5 +150,4 @@ Living file: completed phases, key decisions, next steps.
   same `docker compose ...` commands directly.
 
 ## Next
-- Phase 8 — Monitoring, Notifications & Audit (Beat schedules, health checks,
-  SSL/connector checks, WS notifications, audit UI, Users & Roles page).
+- (none) - phases 0-9 complete; unit suites and prod boot verified.
