@@ -9,6 +9,8 @@ from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
+from apps.sites.models import Site
+
 OVERVIEW_CACHE_KEY = "dashboard:overview"
 OVERVIEW_CACHE_TTL = 45
 
@@ -80,6 +82,33 @@ def recent_users(limit: int = 5) -> list:
     )
 
 
+def site_stats() -> dict:
+    return {
+        "total": Site.objects.count(),
+        "active": Site.objects.filter(status=Site.Statuses.ACTIVE).count(),
+        "pending": Site.objects.filter(status=Site.Statuses.PENDING).count(),
+        "inactive": Site.objects.filter(status=Site.Statuses.INACTIVE).count(),
+        "connected": Site.objects.filter(type=Site.Types.CONNECTED).count(),
+        "built": Site.objects.filter(type=Site.Types.BUILT).count(),
+        "verified": Site.objects.filter(
+            verification_status=Site.VerificationStatuses.VERIFIED
+        ).count(),
+    }
+
+
+def recent_sites(limit: int = 5) -> list:
+    return list(
+        Site.objects.order_by("-created_at").values(
+            "id",
+            "name",
+            "domain",
+            "type",
+            "status",
+            "created_at",
+        )[:limit]
+    )
+
+
 def dashboard_overview() -> dict:
     """Aggregated dashboard data, cached briefly (45 s) per architecture spec."""
     cached = cache.get(OVERVIEW_CACHE_KEY)
@@ -87,9 +116,11 @@ def dashboard_overview() -> dict:
         return cached
     payload = {
         "users": user_stats(),
+        "sites": site_stats(),
         "signups_by_day": signups_by_day(),
         "beat_schedules": beat_schedule_count(),
         "recent_users": recent_users(),
+        "recent_sites": recent_sites(),
         "system": {
             "db": check_database(),
             "redis": check_redis(),
