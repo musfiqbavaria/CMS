@@ -167,3 +167,32 @@ def test_public_renderer_varies_on_host(admin_client, built_site):
     resp = admin_client.get("/", HTTP_HOST="acme-store.example.org")
     assert resp.status_code == 200
     assert "Host" in resp["Vary"]
+
+
+def test_run_check_endpoint(admin_client, built_site):
+    from apps.monitoring.models import HealthCheck
+
+    payload = {"site": built_site.pk, "check_type": "connector"}
+    with patch(
+        "apps.monitoring.services.safe_fetch",
+        return_value=FakeResult(text="<html>no loader</html>", status_code=200),
+    ):
+        resp = admin_client.post(
+            "/api/v1/monitoring/checks/run/", payload, content_type="application/json"
+        )
+    assert resp.status_code == 200, resp.json()
+    assert resp.json()["status"] == "fail"
+    assert HealthCheck.objects.filter(site=built_site, check_type="connector").exists()
+
+    resp = admin_client.post(
+        "/api/v1/monitoring/checks/run/",
+        {"site": built_site.pk, "check_type": "nope"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 400
+    resp = admin_client.post(
+        "/api/v1/monitoring/checks/run/",
+        {"site": built_site.pk, "check_type": "uptime", "host": "evil.example"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 400

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Circle } from "lucide-react";
 import { useDiscoverSite, useVerifySite } from "../connect";
 import { useSite } from "../api";
@@ -20,7 +20,7 @@ export default function VerifyPage() {
   const discover = useDiscoverSite();
   const verify = useVerifySite();
   const { data: editorConfig } = useEditorConfig(Number.isFinite(siteId) ? siteId : null);
-  const { data: connectorChecks } = useQuery({
+  const { data: connectorChecks, refetch: refetchConnector } = useQuery({
     queryKey: ["verify-connector", siteId],
     queryFn: () =>
       api
@@ -29,6 +29,28 @@ export default function VerifyPage() {
         )
         .then((r) => r.data.results),
     enabled: Number.isFinite(siteId),
+  });
+  const qc = useQueryClient();
+  const [checkMsg, setCheckMsg] = useState<string | null>(null);
+  const runCheck = useMutation({
+    mutationFn: () =>
+      api
+        .post<{ detail: Record<string, unknown> }>("/v1/monitoring/checks/run/", {
+          site: siteId,
+          check_type: "connector",
+        })
+        .then((r) => r.data),
+    onSuccess: (check) => {
+      void refetchConnector();
+      void qc.invalidateQueries({ queryKey: ["monitoring-summary"] });
+      const present = (check.detail as Record<string, unknown>)?.present === true;
+      setCheckMsg(
+        present
+          ? "Loader detected — step 2 complete."
+          : "Loader not found yet. Check the snippet URL and site key, save, reload the homepage, then check again.",
+      );
+    },
+    onError: () => setCheckMsg("The check itself failed. Try again in a moment."),
   });
 
   useSiteProgress(Number.isFinite(siteId) ? siteId : null, (e) => {
@@ -70,6 +92,7 @@ export default function VerifyPage() {
       done: isVerified,
       to: "",
       cta: "",
+      checkNow: false,
     },
     {
       label: "Install the loader",
@@ -81,6 +104,7 @@ export default function VerifyPage() {
       done: loaderPresent,
       to: `/websites/${site.id}/setup`,
       cta: "Setup guide",
+      checkNow: site.integration_mode !== "proxy",
     },
     {
       label: "Publish content",
@@ -88,6 +112,7 @@ export default function VerifyPage() {
       done: hasPublished,
       to: `/websites/${site.id}/edit`,
       cta: "Open editor",
+      checkNow: false,
     },
   ];
 
@@ -110,6 +135,9 @@ export default function VerifyPage() {
 
       <Card>
         <CardTitle>Getting this site live</CardTitle>
+        {checkMsg && (
+          <p role="status" className="mt-2 rounded bg-slate-50 p-2 text-sm dark:bg-slate-700">{checkMsg}</p>
+        )}
         <ul className="mt-2 space-y-2">
           {steps.map((s, i) => (
             <li key={s.label} className="flex items-center gap-3">
@@ -126,6 +154,15 @@ export default function VerifyPage() {
                 <Link to={s.to} className="shrink-0 rounded border px-2 py-1 text-xs dark:border-slate-600">
                   {s.cta}
                 </Link>
+              )}
+              {s.checkNow && !s.done && (
+                <button
+                  onClick={() => runCheck.mutate()}
+                  disabled={runCheck.isPending}
+                  className="shrink-0 rounded bg-slate-900 px-2 py-1 text-xs text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
+                >
+                  {runCheck.isPending ? "Checking…" : "Check now"}
+                </button>
               )}
             </li>
           ))}
