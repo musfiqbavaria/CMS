@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { CheckCircle2, Circle } from "lucide-react";
 import { useDiscoverSite, useVerifySite } from "../connect";
 import { useSite } from "../api";
+import { useEditorConfig } from "../../editor/api";
+import { api } from "../../../shared/api/client";
 import type { ProgressEvent } from "../hooks";
 import { useSiteProgress } from "../hooks";
 import { StatusBadge, VerificationBadge } from "../components/StatusBadge";
@@ -15,6 +19,17 @@ export default function VerifyPage() {
   const [banner, setBanner] = useState<string | null>(null);
   const discover = useDiscoverSite();
   const verify = useVerifySite();
+  const { data: editorConfig } = useEditorConfig(Number.isFinite(siteId) ? siteId : null);
+  const { data: connectorChecks } = useQuery({
+    queryKey: ["verify-connector", siteId],
+    queryFn: () =>
+      api
+        .get<{ results: { detail: Record<string, unknown> }[] }>(
+          `/v1/monitoring/checks/?site=${siteId}&check_type=connector&page_size=1`,
+        )
+        .then((r) => r.data.results),
+    enabled: Number.isFinite(siteId),
+  });
 
   useSiteProgress(Number.isFinite(siteId) ? siteId : null, (e) => {
     setEvents((prev) => [...prev.slice(-19), e]);
@@ -45,6 +60,36 @@ export default function VerifyPage() {
   const metaSnippet = `<meta name="cms-verify" content="${site.verification_token}" />`;
   const dnsValue = `cms-verify=${site.verification_token}`;
   const snap = (site.discovery ?? {}) as Record<string, string | number>;
+  const isVerified = site.verification_status === "verified";
+  const loaderPresent = (connectorChecks ?? []).some((c) => c.detail?.present === true);
+  const hasPublished = (editorConfig?.published_version_no ?? 0) > 0;
+  const steps = [
+    {
+      label: "Prove ownership",
+      hint: isVerified ? `Verified via ${site.verification_method || "unknown method"}.` : "Meta tag or DNS record — identity only, changes nothing on the site.",
+      done: isVerified,
+      to: "",
+      cta: "",
+    },
+    {
+      label: "Install the loader",
+      hint: loaderPresent
+        ? "Loader detected on the homepage."
+        : site.integration_mode === "proxy"
+          ? "Point the proxy at us — we inject the loader automatically."
+          : "Paste the snippet so published content can appear on the site.",
+      done: loaderPresent,
+      to: `/websites/${site.id}/setup`,
+      cta: "Setup guide",
+    },
+    {
+      label: "Publish content",
+      hint: hasPublished ? `Live at version ${editorConfig?.published_version_no}.` : "Edit header, logo and hero, then publish — nothing is live until then.",
+      done: hasPublished,
+      to: `/websites/${site.id}/edit`,
+      cta: "Open editor",
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -62,6 +107,30 @@ export default function VerifyPage() {
           {banner} <button onClick={() => setBanner(null)} className="underline">Dismiss</button>
         </p>
       )}
+
+      <Card>
+        <CardTitle>Getting this site live</CardTitle>
+        <ul className="mt-2 space-y-2">
+          {steps.map((s, i) => (
+            <li key={s.label} className="flex items-center gap-3">
+              {s.done ? (
+                <CheckCircle2 size={20} className="shrink-0 text-green-500" />
+              ) : (
+                <Circle size={20} className="shrink-0 text-slate-300 dark:text-slate-600" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{i + 1} · {s.label}</p>
+                <p className="truncate text-xs text-slate-500">{s.hint}</p>
+              </div>
+              {!s.done && s.to && (
+                <Link to={s.to} className="shrink-0 rounded border px-2 py-1 text-xs dark:border-slate-600">
+                  {s.cta}
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <Card>
         <div className="flex items-center justify-between">
@@ -122,6 +191,10 @@ export default function VerifyPage() {
             <li>Paste the tag inside the <code>&lt;head&gt;</code> of {site.domain}’s homepage.</li>
             <li>Click Verify below. We fetch the page and compare the token.</li>
           </ol>
+          <p className="mt-2 rounded bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+            Note: the tag only proves ownership — it cannot change anything on your site.
+            To publish CMS content you still need the loader snippet (step 2 above).
+          </p>
           <button
             onClick={() => verify.mutate({ id: site.id, method: "meta" })}
             disabled={verify.isPending}
