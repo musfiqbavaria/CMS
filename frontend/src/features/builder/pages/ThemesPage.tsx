@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useAssignTheme, useSiteTheme, useThemes } from "../api";
 import { useBuilderStore } from "../../../stores/builder";
 import SitePicker from "../components/SitePicker";
@@ -11,6 +12,10 @@ export default function ThemesPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Themes</h1>
+      <p className="text-sm text-slate-500">
+        Visual styles (colors, fonts). For ready-made pages and menus, see{" "}
+        <Link to="/templates" className="underline">Templates</Link>.
+      </p>
       <SitePicker hint="Assign a theme to the selected site" />
       {isLoading ? (
         <p className="text-sm text-slate-500">Loading…</p>

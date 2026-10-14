@@ -65,6 +65,7 @@ const PostsPage = lazy(resilient(() => import("../features/builder/pages/PostsPa
 const ProductsPage = lazy(resilient(() => import("../features/builder/pages/ProductsPage")));
 const SectionsPage = lazy(resilient(() => import("../features/builder/pages/SectionsPage")));
 const ThemesPage = lazy(resilient(() => import("../features/builder/pages/ThemesPage")));
+const TemplatesPage = lazy(resilient(() => import("../features/builder/pages/TemplatesPage")));
 const SitesPage = lazy(resilient(() => import("../features/sites/pages/SitesPage")));
 const VerifyPage = lazy(resilient(() => import("../features/sites/pages/VerifyPage")));
 const NewSitePage = lazy(resilient(() => import("../features/sites/pages/NewSitePage")));
@@ -100,7 +101,7 @@ export const router = createBrowserRouter([
           { path: "/builder/posts", element: lazyPage(<PostsPage />) },
           { path: "/builder/products", element: lazyPage(<ProductsPage />) },
           { path: "/media", element: lazyPage(<MediaPage />) },
-          { path: "/templates", element: lazyPage(<ThemesPage />) },
+          { path: "/templates", element: lazyPage(<TemplatesPage />) },
           { path: "/monitoring", element: lazyPage(<MonitoringPage />) },
           { path: "/audit", element: lazyPage(<AuditPage />) },
           { path: "/users", element: lazyPage(<UsersPage />) },
