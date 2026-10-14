@@ -1,0 +1,42 @@
+.login-showcase::before {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgb(255 255 255 / 2.5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 2.5%) 1px, transparent 1px);
+  background-size: 64px 64px;
+  content: "";
+  mask-image: linear-gradient(transparent, #000 35%, transparent);
+  pointer-events: none;
+}
+
+.login-showcase::after {
+  position: absolute;
+  top: 12%;
+  right: -240px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(59 130 246 / 15%), transparent 65%);
+  content: "";
+  pointer-events: none;
+}
+
+.login-workspace {
+  transform: perspective(1200px) rotateY(5deg) rotateX(2deg);
+  transform-origin: left center;
+}
+
+.login-input:-webkit-autofill {
+  transition: background-color 86400s ease-in-out;
+}
+
+.dark .login-input:-webkit-autofill {
+  -webkit-text-fill-color: #f8fafc;
+  caret-color: #f8fafc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-input:-webkit-autofill {
+    transition: none;
+  }
+}
