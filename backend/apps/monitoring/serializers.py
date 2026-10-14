@@ -13,6 +13,7 @@ class HealthCheckSerializer(serializers.ModelSerializer):
             "site",
             "site_domain",
             "check_type",
+            "host",
             "status",
             "detail",
             "response_ms",

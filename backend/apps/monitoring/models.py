@@ -17,6 +17,9 @@ class HealthCheck(models.Model):
         "sites.Site", on_delete=models.CASCADE, related_name="health_checks"
     )
     check_type = models.CharField(max_length=16, choices=Types.choices)
+    # Public hostname that was actually probed (Phase 13 per-host monitoring).
+    # Empty on rows written before per-host checks existed (= canonical domain).
+    host = models.CharField(max_length=255, blank=True, default="")
     status = models.CharField(max_length=8, choices=Statuses.choices)
     detail = models.JSONField(default=dict, blank=True)
     response_ms = models.PositiveIntegerField(null=True, blank=True)
@@ -25,12 +28,14 @@ class HealthCheck(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["site", "check_type", "-checked_at"]),
+            models.Index(fields=["site", "check_type", "host", "-checked_at"]),
             models.Index(fields=["-checked_at"]),
         ]
         ordering = ["-checked_at"]
 
     def __str__(self) -> str:
-        return f"{self.site.domain} {self.check_type} {self.status}"
+        target = self.host or self.site.domain
+        return f"{target} {self.check_type} {self.status}"
 
 
 class Notification(models.Model):

@@ -1,0 +1,49 @@
+# EXAMPLE ONLY — not loaded by default (see README "Production TLS").
+# Copy to prod.conf (or mount as default.conf) once certificates exist.
+#
+# Prerequisites per host:
+#   * DNS points the hostname at this server (wildcard *.base for subdomains,
+#     A/CNAME per custom domain).
+#   * DJANGO_ALLOWED_HOSTS covers every served hostname.
+#   * Certificate files exist at the ssl_certificate paths below.
+#
+# Wildcard (*.base): issue once via DNS-01, e.g.
+#   certbot certonly --dns-cloudflare -d 'example.com' -d '*.example.com'
+# Per custom domain: HTTP-01 works through this same Nginx, e.g.
+#   certbot certonly --webroot -w /var/www/certbot -d acme-store.com
+# then reload: docker compose -f docker-compose.prod.yml exec nginx nginx -s reload
+#
+# Cron/renew: `certbot renew --deploy-hook "docker compose -f
+# docker-compose.prod.yml exec nginx nginx -s reload"`.
+
+# Plain HTTP: ACME challenges + upgrade redirect.
+server {
+  listen 80;
+  server_name _;
+
+  location /.well-known/acme-challenge/ {
+    root /var/www/certbot;
+  }
+
+  location / {
+    return 301 https://$host$request_uri;
+  }
+}
+
+# HTTPS: one block per certificate set (wildcard first, then custom domains).
+# Split into more server{} blocks when custom domains use different certs.
+server {
+  listen 443 ssl;
+  server_name example.com *.example.com;
+  http2 on;
+
+  ssl_certificate /etc/nginx/certs/example.com/fullchain.pem;
+  ssl_certificate_key /etc/nginx/certs/example.com/privkey.pem;
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers on;
+
+  # ... same location blocks as conf.d/prod.conf (/api/ /connector/ /ws/
+  # /static/ /media/ /assets/ /) plus resolver + rate limits from nginx.conf.
+  # The $serve_spa host map works unchanged: customer domains render via
+  # Django, the CMS host serves the SPA.
+}

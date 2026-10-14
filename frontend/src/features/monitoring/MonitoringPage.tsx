@@ -10,7 +10,17 @@ interface CheckSummary {
   domain: string;
   type: string;
   overall: "ok" | "fail" | "unknown";
-  checks: Record<string, { status: string; checked_at: string; response_ms: number | null; detail: Record<string, unknown> } | null>;
+  hosts: Record<string, Record<string, string>>;
+  checks: Record<string, { status: string; checked_at: string | null; response_ms: number | null; detail: Record<string, unknown>; hosts?: string[] } | null>;
+}
+
+interface HistoryRow {
+  id: number;
+  check_type: string;
+  host: string;
+  status: string;
+  detail: Record<string, unknown>;
+  checked_at: string;
 }
 
 const CHECK_LABELS: Record<string, string> = { uptime: "Uptime", ssl: "SSL", connector: "Connector" };
@@ -30,7 +40,7 @@ export default function MonitoringPage() {
     queryKey: ["monitoring-history", siteId],
     queryFn: () =>
       api
-        .get<{ results: { id: number; check_type: string; status: string; detail: Record<string, unknown>; checked_at: string }[] }>(
+        .get<{ results: HistoryRow[] }>(
           `/v1/monitoring/checks/?${siteId ? `site=${siteId}&` : ""}page_size=20`,
         )
         .then((r) => r.data.results),
@@ -65,6 +75,16 @@ export default function MonitoringPage() {
                     <td className="py-2 pr-4">
                       <Link to={`/websites/${row.site}/setup`} className="font-medium underline">{row.name}</Link>
                       <span className="ml-2 font-mono text-xs text-slate-500">{row.domain}</span>
+                      {Object.keys(row.hosts ?? {}).length > 1 && (
+                        <span className="mt-1 flex flex-wrap gap-1">
+                          {Object.entries(row.hosts).map(([host, states]) => (
+                            <span key={host} title={host} className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                              <StatusDot status={states.overall === "ok" ? "ok" : "error"} />
+                              {host}
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </td>
                     <td className="py-2 pr-4"><StatusDot status={row.overall === "fail" ? "error" : row.overall} /></td>
                     {["uptime", "ssl", "connector"].map((k) => (
@@ -104,6 +124,7 @@ export default function MonitoringPage() {
               <li key={c.id} className="flex gap-2">
                 <StatusDot status={c.status === "ok" ? "ok" : "error"} />
                 <span className="font-medium">{CHECK_LABELS[c.check_type] ?? c.check_type}</span>
+                {c.host && <span className="font-mono text-xs text-slate-500">{c.host}</span>}
                 <span className="text-slate-500">{new Date(c.checked_at).toLocaleString()}</span>
                 <span className="truncate font-mono text-xs text-slate-500">{JSON.stringify(c.detail)}</span>
               </li>

@@ -13,6 +13,9 @@ def _site(request):
 def _html(body: str, status=200) -> HttpResponse:
     resp = HttpResponse(body, content_type="text/html", status=status)
     resp["Cache-Control"] = "public, max-age=60"
+    # Responses vary by Host (one renderer serves every customer site);
+    # shared caches must key on it.
+    resp["Vary"] = "Host"
     return resp
 
 

@@ -16,7 +16,7 @@ class HealthCheckViewSet(
     queryset = HealthCheck.objects.select_related("site").all()
     serializer_class = HealthCheckSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ["site", "check_type", "status"]
+    filterset_fields = ["site", "check_type", "host", "status"]
     ordering_fields = ["checked_at"]
     ordering = ["-checked_at"]
     http_method_names = ["get", "head", "options"]

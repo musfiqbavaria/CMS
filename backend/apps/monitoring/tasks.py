@@ -12,6 +12,12 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def active_monitored_sites():
+    from apps.sites.models import Site
+
+    return Site.objects.filter(status=Site.Statuses.ACTIVE).prefetch_related("domains")
+
+
 def active_connected_sites():
     from apps.sites.models import Site
 
@@ -20,23 +26,25 @@ def active_connected_sites():
 
 @shared_task(name="monitoring.check_site_uptime")
 def check_site_uptime() -> dict:
-    from apps.monitoring.services import check_uptime
+    from apps.monitoring.services import check_uptime, monitored_hostnames
 
     results = {"ok": 0, "fail": 0}
-    for site in active_connected_sites():
-        check = check_uptime(site)
-        results["ok" if check.status == "ok" else "fail"] += 1
+    for site in active_monitored_sites():
+        for host in monitored_hostnames(site):
+            check = check_uptime(site, host)
+            results["ok" if check.status == "ok" else "fail"] += 1
     return results
 
 
 @shared_task(name="monitoring.check_ssl_expiry")
 def check_ssl_expiry() -> dict:
-    from apps.monitoring.services import check_ssl
+    from apps.monitoring.services import check_ssl, monitored_hostnames
 
     results = {"ok": 0, "fail": 0}
-    for site in active_connected_sites():
-        check = check_ssl(site)
-        results["ok" if check.status == "ok" else "fail"] += 1
+    for site in active_monitored_sites():
+        for host in monitored_hostnames(site):
+            check = check_ssl(site, host)
+            results["ok" if check.status == "ok" else "fail"] += 1
     return results
 
 

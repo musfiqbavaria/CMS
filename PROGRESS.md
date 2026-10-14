@@ -32,6 +32,21 @@ Living file: completed phases, key decisions, next steps.
   suite + lint + build green; prod rebuild + smoke green.
 - Next: Phase 13 per-host TLS automation, cache keys, monitoring per URL.
 
+### Phase 13 - Per-host TLS operations + monitoring (done)
+- `HealthCheck.host` (+ migration/index): uptime + SSL checks probe every
+  public hostname (canonical + verified aliases), with per-host
+  fail/recovery transitions; tasks cover all active sites (connector stays
+  connected-only). SSL expiry warns per hostname (<14 days).
+- Summary rows carry a per-host breakdown (worst state wins); history API
+  filterable by `host`; Monitoring page shows per-host chips + host in rows.
+- Cache inventory hardened: `Vary: Host` on public HTML (host-keyed shared
+  caches); connector keyed by site_key, sitemap by site id (both
+  host-independent by design).
+- TLS runbook in README + `nginx/conf.d/prod-tls.conf.example` (443 blocks,
+  wildcard DNS-01 + per-domain HTTP-01, reload-on-renew).
+- Tests: 6 new pytest (hostnames, per-host transitions, per-alias SSL,
+  summary breakdown, host filter, Vary header).
+
 ### Phase 11 - Multi-alias hostnames + custom-domain verification (done)
 - `SiteDomain` model (+ migrations incl. backfill: every existing site keeps
   a primary verified alias mirroring its domain). One site answers on its

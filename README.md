@@ -255,6 +255,27 @@ Hardening notes (Phase 9):
 - Consolidated scheduler handles uptime, SSL, connector, sitemap, backup, and
   cleanup jobs.
 
+## Production TLS (Phase 13)
+
+TLS terminates at Nginx / your load balancer; this repo serves port 80 by
+default and `nginx/conf.d/prod-tls.conf.example` is the 443 template.
+
+- Wildcard for free subdomains: issue once via DNS-01
+  (`certbot ... -d 'example.com' -d '*.example.com'`), mount under
+  `/etc/nginx/certs/`, reload Nginx.
+- Each custom domain: HTTP-01 works through this same Nginx
+  (`/.well-known/acme-challenge/` is served on port 80 by the example);
+  add the hostname to `DJANGO_ALLOWED_HOSTS` and
+  `DJANGO_CSRF_TRUSTED_ORIGINS` (`https://...`), then reload.
+- Renewals: `certbot renew` + `nginx -s reload` on a timer. The monitoring
+  SSL check now probes **every verified hostname** (14-day warning,
+  per-host failure alerts), so an expiring or missing custom-domain cert
+  pages you before users notice.
+- Cache inventory (all host-safe): connector payloads keyed by `site_key`
+  (content is host-independent), sitemaps keyed by site id with canonical
+  absolute URLs, public HTML carries `Cache-Control: public, max-age=60`
+  plus `Vary: Host` so shared caches key per hostname.
+
 ## Repo layout
 
 ```
