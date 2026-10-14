@@ -75,7 +75,62 @@ def subdomain_label(host: str) -> str:
 
 
 def canonical_url(site) -> str:
-    return f"https://{normalize_hostname(site.domain)}"
+    return f"https://{canonical_host(site)}"
+
+
+def canonical_host(site) -> str:
+    """Primary alias hostname when one exists, else the site's domain."""
+    primary = (
+        site.domains.filter(is_primary=True).values_list("hostname", flat=True).first()
+    )
+    if primary:
+        return normalize_hostname(primary)
+    return normalize_hostname(site.domain)
+
+
+def ingress_host() -> str:
+    return (getattr(settings, "PLATFORM_INGRESS_HOST", "") or "").strip().lower()
+
+
+def ensure_primary_alias(site):
+    """Mirror Site.domain as the verified primary alias (backfill + safety net)."""
+    from apps.sites.models import SiteDomain
+
+    host = normalize_hostname(site.domain)
+    if not host:
+        return None
+    base = platform_base_domain()
+    kind = (
+        SiteDomain.Kinds.MANAGED
+        if base and (host == base or host.endswith("." + base))
+        else SiteDomain.Kinds.CUSTOM
+    )
+    alias, created = SiteDomain.objects.get_or_create(
+        hostname=host,
+        defaults={
+            "site": site,
+            "kind": kind,
+            "is_primary": True,
+            "verification_status": SiteDomain.VerificationStatuses.VERIFIED,
+        },
+    )
+    if not created and not alias.is_primary:
+        alias.is_primary = True
+        alias.save(update_fields=["is_primary", "updated_at"])
+    SiteDomain.objects.filter(site=site, is_primary=True).exclude(pk=alias.pk).update(
+        is_primary=False
+    )
+    return alias
+
+
+def dns_instructions(alias) -> dict:
+    """Copy-paste DNS records proving ownership + routing for a custom alias."""
+    return {
+        "cname_host": alias.hostname,
+        "cname_target": ingress_host(),
+        "txt_host": alias.hostname,
+        "txt_value": f"cms-verify={alias.verification_token}",
+    }
 
 
 def validate_public_hostname(value: str, *, instance=None) -> str:
@@ -118,6 +173,15 @@ def validate_public_hostname(value: str, *, instance=None) -> str:
     if qs.exists():
         raise drf_serializers.ValidationError(
             "A site with this address already exists."
+        )
+    from apps.sites.models import SiteDomain
+
+    alias_qs = SiteDomain.objects.filter(hostname__iexact=host)
+    if instance is not None:
+        alias_qs = alias_qs.exclude(site=instance)
+    if alias_qs.exists():
+        raise drf_serializers.ValidationError(
+            "This address is already attached to another site."
         )
     return host
 

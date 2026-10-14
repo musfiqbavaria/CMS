@@ -17,11 +17,23 @@ Living file: completed phases, key decisions, next steps.
   keyed by site pk (survives domain changes).
 - Add-website form offers Free-subdomain vs Custom-domain for built sites
   with live URL preview; site list rows link out via `public_url`.
-- Tests: 8 new pytest (helpers, subdomain/custom create, guards, middleware)
-  + extended vitest schema cases. Docs: README “Hosted sites”, `.env.example`
-  DNS/TLS/ALLOWED_HOSTS notes.
-- Next: Phase 11 multi-alias hostnames + CNAME/TXT verification UI;
-  Phase 12 builder hardening; Phase 13 per-host TLS/cache/monitoring.
+- Tests: 8 new pytest + extended vitest schema cases. Docs: README
+  “Hosted sites”, `.env.example` DNS/TLS/ALLOWED_HOSTS notes.
+
+### Phase 11 - Multi-alias hostnames + custom-domain verification (done)
+- `SiteDomain` model (+ migrations incl. backfill: every existing site keeps
+  a primary verified alias mirroring its domain). One site answers on its
+  free subdomain AND any number of custom domains.
+- Services-only writes: add (managed auto-verified, custom pending),
+  synchronous DNS TXT check (`cms-verify=TOKEN`, reuses Phase 4 lookup),
+  make-primary (verified only; moves `Site.domain`, purges sitemap cache),
+  delete (primary protected). All audited.
+- Middleware serves verified aliases; unverified custom hosts stay dark.
+  `PLATFORM_INGRESS_HOST` (defaults to base) advertised as the CNAME target.
+- Domains page at `/websites/:id/domains` (row action for built sites):
+  badges, copy-paste CNAME/TXT instructions, check/make-primary/delete.
+- Tests: 7 new pytest (add/verify/fail/primary/delete/middleware) — full
+  backend suite green; tsc/eslint/vitest clean; prod rebuild + smoke green.
 
 ### Phase 9 - Production Readiness (done)\n- Deploy check now clean: fixed missing DRF `retrieve` actions and schema hints so `manage.py check --deploy` has only SSL-redirect W008 (TLS at Nginx).\n- Security/headers: HSTS + browser security/CSP headers in Nginx; .env secrets ignored; `.env.example` documents auth/upload/retention knobs.\n- Performance: monitoring summary uses a single-pass bounded query (no N+1), cached 30s and invalidated on new check; public connector/admin paths unaffected.\n- Frontend bundle split with route/lazy loading (main bundle ~435 KB vs previous ~959 KB); Nginx serves immutable `/assets` chunks.\n- CI: Redis service + DBURL/env for monitoring socket tests; frontend lint/test/build added; paths run from `backend/`.\n- Prod routing: host-aware Nginx map (`$serve_spa`) restores customer-domain rendering while serving SPA on CMS host; prod RSA/IP stale-DNS mitigation retained.\n- Smoke: production Compose project builds and boots; `/api/health/` 200 through Nginx; backend 81 pytest + 14 vitest + lint/build green.\n\n### Phase 8 - Monitoring, Notifications & Audit (done)
 - `HealthCheck` + `Notification` models/migrations; uptime/SSL/connector services

@@ -5,12 +5,30 @@ export type IntegrationMode = "connector" | "proxy";
 
 export type DiscoveryStatus = "pending" | "running" | "succeeded" | "failed";
 
+export interface SiteDomain {
+  id: number;
+  hostname: string;
+  kind: "managed" | "custom";
+  is_primary: boolean;
+  verification_status: VerificationStatus;
+  verification_error: string;
+  verified_at: string | null;
+  created_at: string;
+  dns: {
+    cname_host: string;
+    cname_target: string;
+    txt_host: string;
+    txt_value: string;
+  } | null;
+}
+
 export interface Site {
   id: number;
   name: string;
   domain: string;
   is_managed: boolean;
   public_url: string;
+  domains: SiteDomain[];
   site_key: string;
   type: SiteType;
   status: SiteStatus;

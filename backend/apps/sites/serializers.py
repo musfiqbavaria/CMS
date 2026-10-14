@@ -1,7 +1,44 @@
 from rest_framework import serializers
 
 from . import hosting
-from .models import Site
+from .models import Site, SiteDomain
+
+
+class SiteDomainSerializer(serializers.ModelSerializer):
+    dns = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SiteDomain
+        fields = [
+            "id",
+            "hostname",
+            "kind",
+            "is_primary",
+            "verification_status",
+            "verification_error",
+            "verified_at",
+            "created_at",
+            "dns",
+        ]
+        read_only_fields = [
+            "id",
+            "kind",
+            "is_primary",
+            "verification_status",
+            "verification_error",
+            "verified_at",
+            "created_at",
+            "dns",
+        ]
+
+    def get_dns(self, obj) -> dict | None:
+        if obj.kind != SiteDomain.Kinds.CUSTOM:
+            return None
+        return hosting.dns_instructions(obj)
+
+
+class SiteDomainCreateSerializer(serializers.Serializer):
+    hostname = serializers.CharField(max_length=255)
 
 
 class SiteSerializer(serializers.ModelSerializer):
@@ -12,6 +49,7 @@ class SiteSerializer(serializers.ModelSerializer):
     subdomain = serializers.CharField(required=False, allow_blank=True, write_only=True)
     is_managed = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
+    domains = SiteDomainSerializer(many=True, read_only=True)
 
     class Meta:
         model = Site
@@ -22,6 +60,7 @@ class SiteSerializer(serializers.ModelSerializer):
             "subdomain",
             "is_managed",
             "public_url",
+            "domains",
             "site_key",
             "type",
             "status",

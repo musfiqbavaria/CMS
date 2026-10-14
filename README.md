@@ -168,6 +168,26 @@ How it works:
   (templates, publish flow); Phase 13 covers per-host TLS automation,
   cache keys, and monitoring per public URL.
 
+## Custom domains on hosted sites (Phase 11)
+
+A built site can now answer on several addresses at once: its free subdomain
+plus any number of custom domains, all served from this platform.
+
+- Manage at `/websites/:id/domains` (row action “Domains”): the primary
+  (canonical) address plus every alias with kind/verification badges.
+- Adding a custom domain returns copy-paste DNS records: a `CNAME` to
+  `PLATFORM_INGRESS_HOST` for traffic, and a `TXT cms-verify=TOKEN` record
+  for ownership. Managed subdomains are verified automatically.
+- “Check verification” runs the DNS TXT lookup synchronously; unverified
+  aliases never serve traffic (unknown-host 404). “Make primary” switches
+  the canonical address (`Site.domain`, sitemap, absolute URLs) to a verified
+  alias; the primary cannot be deleted.
+- API: `GET/POST /api/v1/sites/<id>/domains/`,
+  `GET/DELETE /api/v1/sites/<id>/domains/<alias>/`,
+  `POST .../check/`, `POST .../make-primary/`. Every change is audited.
+- TLS: still terminate at Nginx/LB — add each custom domain to your certs
+  (per-host automation arrives in Phase 13).
+
 ## Monitoring, notifications & audit (Phase 8)
 
 - `HealthCheck` history (uptime/SSL/connector) + `Notification` inbox with a live

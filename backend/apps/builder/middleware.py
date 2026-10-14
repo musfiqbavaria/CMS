@@ -39,5 +39,20 @@ class BuilderDomainMiddleware:
                 )
             except Site.DoesNotExist:
                 site = None
+            if site is None:
+                # Phase 11 multi-alias: verified non-primary hostnames serve too.
+                from apps.sites.models import SiteDomain
+
+                alias = (
+                    SiteDomain.objects.select_related("site", "site__theme")
+                    .filter(
+                        hostname__iexact=host,
+                        site__type=Site.Types.BUILT,
+                        site__status=Site.Statuses.ACTIVE,
+                        verification_status=SiteDomain.VerificationStatuses.VERIFIED,
+                    )
+                    .first()
+                )
+                site = alias.site if alias else None
             request.built_site = site
         return self.get_response(request)

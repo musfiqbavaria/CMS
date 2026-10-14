@@ -146,6 +146,12 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 PLATFORM_BASE_DOMAIN = (
     os.environ.get("PLATFORM_BASE_DOMAIN", "").strip().lower().rstrip(".")
 )
+# Public hostname customers CNAME custom domains to (defaults to the base
+# domain, which must resolve to this server). Shown in DNS instructions.
+PLATFORM_INGRESS_HOST = (
+    os.environ.get("PLATFORM_INGRESS_HOST", "").strip().lower().rstrip(".")
+    or PLATFORM_BASE_DOMAIN
+)
 
 # --- Auth: custom user model (roles, lockout, TOTP 2FA) ---
 AUTH_USER_MODEL = "accounts.User"

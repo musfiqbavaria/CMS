@@ -24,6 +24,7 @@ const ThemesPage = lazy(() => import("../features/builder/pages/ThemesPage"));
 const SitesPage = lazy(() => import("../features/sites/pages/SitesPage"));
 const VerifyPage = lazy(() => import("../features/sites/pages/VerifyPage"));
 const NewSitePage = lazy(() => import("../features/sites/pages/NewSitePage"));
+const DomainsPage = lazy(() => import("../features/sites/pages/DomainsPage"));
 
 function lazyPage(node: React.ReactNode) {
   return <Suspense fallback={<p className="p-4 text-sm text-slate-500">Loading…</p>}>{node}</Suspense>;
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
           { path: "/websites", element: lazyPage(<SitesPage />) },
           { path: "/websites/new", element: lazyPage(<NewSitePage />) },
           { path: "/websites/:id/verify", element: lazyPage(<VerifyPage />) },
+          { path: "/websites/:id/domains", element: lazyPage(<DomainsPage />) },
           { path: "/websites/:id/edit", element: lazyPage(<EditorPage />) },
           { path: "/websites/:id/setup", element: lazyPage(<SetupPage />) },
           { path: "/websites/:id/mappings", element: lazyPage(<MappingsPage />) },

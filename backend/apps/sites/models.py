@@ -123,3 +123,49 @@ class Site(models.Model):
     def deactivate(self) -> None:
         self.status = self.Statuses.INACTIVE
         self.save(update_fields=["status", "updated_at"])
+
+
+class SiteDomain(models.Model):
+    """Extra public hostnames for a built site (Phase 11 multi-alias).
+
+    One row per alias: the free subdomain and/or custom domains, all served
+    from this same host. Exactly one alias per site is primary and mirrors
+    ``Site.domain`` (the canonical address used for sitemaps/absolute URLs).
+    Custom aliases serve traffic only once verified.
+    """
+
+    class Kinds(models.TextChoices):
+        MANAGED = "managed", "Managed subdomain"
+        CUSTOM = "custom", "Custom domain"
+
+    class VerificationStatuses(models.TextChoices):
+        PENDING = "pending", "Pending"
+        VERIFIED = "verified", "Verified"
+        FAILED = "failed", "Failed"
+
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="domains")
+    hostname = models.CharField(max_length=255, unique=True)
+    kind = models.CharField(max_length=16, choices=Kinds.choices, default=Kinds.CUSTOM)
+    is_primary = models.BooleanField(default=False)
+    verification_status = models.CharField(
+        max_length=16,
+        choices=VerificationStatuses.choices,
+        default=VerificationStatuses.PENDING,
+    )
+    verification_token = models.CharField(
+        max_length=64, default=generate_verification_token, editable=False
+    )
+    verification_error = models.TextField(blank=True, default="")
+    verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["site", "is_primary"]),
+            models.Index(fields=["hostname"]),
+        ]
+        ordering = ["-is_primary", "hostname"]
+
+    def __str__(self) -> str:
+        return f"{self.hostname} ({self.site.domain})"

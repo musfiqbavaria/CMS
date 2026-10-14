@@ -302,6 +302,9 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
   Open
 </a>
                         <Link to={`/websites/${site.id}/setup`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Setup</Link>
+                        {site.type === "built" && (
+                          <Link to={`/websites/${site.id}/domains`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Domains</Link>
+                        )}
                         {site.type === "connected" && (
                           <Link to={`/websites/${site.id}/verify`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">
                             Verify

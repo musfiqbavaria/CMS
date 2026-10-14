@@ -11,7 +11,9 @@ from .serializers import BulkActionSerializer, SiteSerializer
 
 
 class SiteViewSet(viewsets.ModelViewSet):
-    queryset = Site.objects.select_related("created_by").all()
+    queryset = (
+        Site.objects.select_related("created_by").prefetch_related("domains").all()
+    )
     serializer_class = SiteSerializer
     filter_backends = [
         DjangoFilterBackend,
