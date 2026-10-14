@@ -292,3 +292,45 @@ export function useAssignTheme(siteId: number) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["site-theme", siteId] }),
   });
 }
+
+// ---- starter templates & homepage (Phase 12) ----
+export interface StarterTemplate {
+  slug: string;
+  name: string;
+  description: string;
+  pages: number;
+}
+
+export function useTemplates(siteId: number | null) {
+  return useQuery({
+    queryKey: ["templates", siteId],
+    queryFn: () => api.get<StarterTemplate[]>(`${base(siteId as number)}/templates/`).then((r) => r.data),
+    enabled: siteId !== null,
+  });
+}
+
+export function useApplyTemplate(siteId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { template: string; force?: boolean }) =>
+      api.post(`${base(siteId)}/templates/apply/`, input).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pages", siteId] });
+      qc.invalidateQueries({ queryKey: ["menus", siteId] });
+      qc.invalidateQueries({ queryKey: ["sites"] });
+      qc.invalidateQueries({ queryKey: ["site", siteId] });
+    },
+  });
+}
+
+export function useSetHomepage(siteId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (page: number) =>
+      api.post<{ homepage: number }>(`${base(siteId)}/homepage/`, { page }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sites"] });
+      qc.invalidateQueries({ queryKey: ["site", siteId] });
+    },
+  });
+}

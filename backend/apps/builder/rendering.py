@@ -169,6 +169,15 @@ def render_product(site, product) -> str:
 
 
 def render_home(site) -> str:
+    home_id = getattr(site, "homepage_id", None)
+    if home_id:
+        page = (
+            site.pages.filter(pk=home_id, status="published")
+            .prefetch_related("sections")
+            .first()
+        )
+        if page is not None:
+            return render_page(site, page)
     page = site.pages.filter(status="published", slug__in=["", "home"]).first()
     if page is not None:
         return render_page(site, page)

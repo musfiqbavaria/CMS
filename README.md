@@ -136,6 +136,20 @@ Open:
   drag reorder, enable toggles), posts, menus, themes gallery + assign, products
   with variants/stock, cross-page sections list.
 
+## Builder hardening (Phase 12)
+
+- Starter templates (Business, Portfolio, Store): `GET
+  .../builder/templates/` lists them, `POST .../templates/apply/`
+  seeds published pages + sections + nav menu and sets the homepage.
+  Refuses non-empty sites unless `force: true` (which replaces pages/menus).
+  The Pages empty state offers the gallery.
+- Explicit homepage: `Site.homepage` + `POST .../builder/homepage/` (page
+  must be published on that site); `/` renders it first, still falling back
+  to slug `home`. The homepage cannot be deleted while selected; Pages rows
+  show a homepage badge + “Set as homepage”.
+- Site publish bar on the Pages page: live status, theme, View-live link,
+  Publish/Unpublish site (activation gate for public rendering).
+
 ## Hosted sites (Phase 10)
 
 Built sites are hosted on this same platform, Google-Sites style. Each site

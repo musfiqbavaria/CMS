@@ -10,6 +10,7 @@ from .views import (
     ProductViewSet,
     SectionViewSet,
     SiteThemeView,
+    SiteStarterView,
     TagViewSet,
     ThemeViewSet,
 )
@@ -55,6 +56,9 @@ product_detail = ProductViewSet.as_view(
 theme_list = ThemeViewSet.as_view({"get": "list"})
 theme_detail = ThemeViewSet.as_view({"get": "retrieve"})
 site_theme = SiteThemeView.as_view({"get": "current", "post": "assign"})
+starter_list = SiteStarterView.as_view({"get": "templates"})
+starter_apply = SiteStarterView.as_view({"post": "apply"})
+starter_homepage = SiteStarterView.as_view({"post": "homepage"})
 
 urlpatterns = [
     path("sites/<int:site_pk>/builder/pages/", page_list),
@@ -87,6 +91,9 @@ urlpatterns = [
     path("sites/<int:site_pk>/builder/products/", product_list),
     path("sites/<int:site_pk>/builder/products/<int:pk>/", product_detail),
     path("sites/<int:site_pk>/builder/theme/", site_theme),
+    path("sites/<int:site_pk>/builder/templates/", starter_list),
+    path("sites/<int:site_pk>/builder/templates/apply/", starter_apply),
+    path("sites/<int:site_pk>/builder/homepage/", starter_homepage),
     path("builder/themes/", theme_list),
     path("builder/themes/<int:pk>/", theme_detail),
 ]

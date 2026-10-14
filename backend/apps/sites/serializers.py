@@ -61,6 +61,7 @@ class SiteSerializer(serializers.ModelSerializer):
             "is_managed",
             "public_url",
             "domains",
+            "homepage",
             "site_key",
             "type",
             "status",
@@ -82,6 +83,7 @@ class SiteSerializer(serializers.ModelSerializer):
         extra_kwargs = {"domain": {"required": False, "allow_blank": True}}
         read_only_fields = [
             "id",
+            "homepage",
             "site_key",
             "status",
             "verification_status",

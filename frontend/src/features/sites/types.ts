@@ -29,6 +29,7 @@ export interface Site {
   is_managed: boolean;
   public_url: string;
   domains: SiteDomain[];
+  homepage: number | null;
   site_key: string;
   type: SiteType;
   status: SiteStatus;

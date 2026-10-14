@@ -95,7 +95,14 @@ class PageViewSet(SiteScopedMixin, GenericViewSet):
         return Response(PageSerializer(page).data)
 
     def destroy(self, request, site_pk=None, pk=None):
-        self.get_queryset().get(pk=pk).delete()
+        site = self.get_site()
+        page = self.get_queryset().get(pk=pk)
+        if site.homepage_id == page.pk:
+            return Response(
+                {"detail": "This page is the homepage. Set another homepage first."},
+                status=400,
+            )
+        page.delete()
         return Response(status=204)
 
 
@@ -366,3 +373,31 @@ class SiteThemeView(SiteScopedMixin, GenericViewSet):
         services.ensure_builtin_themes()
         services.assign_theme(site, theme)
         return Response({"theme": site.theme_id, "theme_name": theme.name})
+
+
+class SiteStarterView(SiteScopedMixin, GenericViewSet):
+    """Starter templates + homepage selection for a built site (Phase 12)."""
+
+    def templates(self, request, site_pk=None):
+        self.get_site()
+        return Response(services.list_templates())
+
+    def apply(self, request, site_pk=None):
+        site = self.get_site()
+        try:
+            result = services.apply_template(
+                site,
+                request.data.get("template", ""),
+                force=bool(request.data.get("force", False)),
+            )
+        except DjangoValidationError as exc:
+            raise _as_drf(exc)
+        return Response(result, status=201)
+
+    def homepage(self, request, site_pk=None):
+        site = self.get_site()
+        try:
+            services.set_homepage(site, request.data.get("page"))
+        except DjangoValidationError as exc:
+            raise _as_drf(exc)
+        return Response({"homepage": site.homepage_id})

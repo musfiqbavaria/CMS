@@ -66,6 +66,14 @@ class Site(models.Model):
         on_delete=models.SET_NULL,
         related_name="sites",
     )
+    homepage = models.ForeignKey(
+        "builder.Page",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Published page served at the site root. Falls back to slug 'home'.",
+    )
     verification_method = models.CharField(max_length=8, blank=True, default="")
     verification_error = models.TextField(blank=True, default="")
     verified_at = models.DateTimeField(null=True, blank=True)

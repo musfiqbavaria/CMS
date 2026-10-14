@@ -20,6 +20,18 @@ Living file: completed phases, key decisions, next steps.
 - Tests: 8 new pytest + extended vitest schema cases. Docs: README
   “Hosted sites”, `.env.example` DNS/TLS/ALLOWED_HOSTS notes.
 
+### Phase 12 - Builder hardening: templates + publish flow (done)
+- Starter templates (Business/Portfolio/Store) with apply endpoint (empty
+  sites only unless forced; replaces pages/menus, sets homepage); gallery in
+  the Pages empty state.
+- Explicit `Site.homepage` (+ migration) with set-homepage endpoint
+  (published pages only); `/` renders it first; homepage delete-guarded;
+  Pages rows show badge + action.
+- Site publish bar (status, theme, View-live, Publish/Unpublish) on Pages.
+- Tests: 5 new pytest (list/apply/guard/force/homepage/delete-guard); full
+  suite + lint + build green; prod rebuild + smoke green.
+- Next: Phase 13 per-host TLS automation, cache keys, monitoring per URL.
+
 ### Phase 11 - Multi-alias hostnames + custom-domain verification (done)
 - `SiteDomain` model (+ migrations incl. backfill: every existing site keeps
   a primary verified alias mirroring its domain). One site answers on its
