@@ -6,7 +6,7 @@ from django.utils.text import slugify
 
 from apps.sites.models import Site
 
-from .models import Menu, MenuItem, Page, Section, Theme
+from .models import Menu, MenuItem, Page, Post, PostCategory, Section, Theme
 
 BUILTIN_THEMES = {
     "starter": {
@@ -78,6 +78,58 @@ def reorder_sections(page, ids: list) -> None:
         raise ValidationError("Order must contain exactly the page's section ids.")
     for position, section_id in enumerate(ids):
         page.sections.filter(pk=section_id).update(position=position)
+
+
+# --- Section presets (Phase 14): every new section starts with editable
+# sample content instead of a blank form. Explicit settings always win.
+SECTION_PRESETS = {
+    "hero": {
+        "heading": "Welcome to our site",
+        "subheading": "Tell visitors what you do in one clear sentence.",
+        "background": "#f1f5f9",
+        "primary_label": "Learn more",
+        "primary_url": "/",
+    },
+    "features": {
+        "title": "Features",
+        "items": [
+            {"title": "First benefit", "text": "Why it matters."},
+            {"title": "Second benefit", "text": "Why it matters."},
+            {"title": "Third benefit", "text": "Why it matters."},
+        ],
+    },
+    "gallery": {"title": "Gallery", "images": []},
+    "testimonials": {
+        "title": "Testimonials",
+        "items": [{"text": "A kind word from a customer.", "author": "Happy customer"}],
+    },
+    "pricing": {
+        "title": "Pricing",
+        "plans": [
+            {"name": "Starter", "price": "$9", "blurb": "For trying things out."},
+            {"name": "Pro", "price": "$29", "blurb": "For serious use."},
+        ],
+    },
+    "faq": {
+        "title": "FAQ",
+        "items": [{"q": "How do we start?", "a": "Replace this with your answer."}],
+    },
+    "contact": {"email": "hello@example.com", "phone": "", "address": ""},
+    "blog_list": {"title": "Latest posts", "count": 5},
+    "product_grid": {"title": "Products", "count": 8},
+    "custom_html": {"html": "<!-- Your HTML here -->"},
+}
+
+
+def default_section_settings(section_type: str, settings: dict | None) -> dict:
+    """Merge caller settings over the preset so blanks become samples."""
+    import copy
+
+    preset = copy.deepcopy(SECTION_PRESETS.get(section_type, {}))
+    for key, value in (settings or {}).items():
+        if value not in (None, "", [], {}):
+            preset[key] = value
+    return preset
 
 
 def assign_theme(site: Site, theme: Theme) -> Site:
@@ -289,6 +341,106 @@ TEMPLATES = {
         ],
         "menu": {"name": "Main", "items": [{"label": "Home", "url": "/"}]},
     },
+    "restaurant": {
+        "name": "Restaurant",
+        "description": "Hero, specials, gallery, reviews and reservations.",
+        "pages": [
+            {
+                "title": "Home",
+                "slug": "home",
+                "sections": [
+                    {
+                        "type": "hero",
+                        "settings": {
+                            "heading": "Fresh from our kitchen",
+                            "subheading": "Seasonal dishes, warm hospitality.",
+                            "primary_label": "Book a table",
+                            "primary_url": "/contact/",
+                        },
+                    },
+                    {
+                        "type": "features",
+                        "settings": {
+                            "title": "Chef's specials",
+                            "items": [
+                                {"title": "Starter", "text": "Soup of the day."},
+                                {"title": "Main", "text": "Grilled specials."},
+                                {"title": "Dessert", "text": "Homemade sweets."},
+                            ],
+                        },
+                    },
+                    {"type": "gallery", "settings": {"title": "Inside", "images": []}},
+                    {
+                        "type": "testimonials",
+                        "settings": {
+                            "title": "Reviews",
+                            "items": [
+                                {"text": "Best dinner in town.", "author": "A regular"}
+                            ],
+                        },
+                    },
+                ],
+            },
+            {
+                "title": "Contact",
+                "slug": "contact",
+                "sections": [
+                    {
+                        "type": "contact",
+                        "settings": {
+                            "email": "table@example.com",
+                            "phone": "",
+                            "address": "",
+                        },
+                    },
+                ],
+            },
+        ],
+        "menu": {
+            "name": "Main",
+            "items": [
+                {"label": "Home", "url": "/"},
+                {"label": "Contact", "url": "/contact/"},
+            ],
+        },
+    },
+    "blog": {
+        "name": "Blog",
+        "description": "Hero plus latest-posts feed, with sample category and posts.",
+        "pages": [
+            {
+                "title": "Home",
+                "slug": "home",
+                "sections": [
+                    {
+                        "type": "hero",
+                        "settings": {
+                            "heading": "Notes & stories",
+                            "subheading": "Thoughts worth sharing.",
+                        },
+                    },
+                    {
+                        "type": "blog_list",
+                        "settings": {"title": "Latest posts", "count": 5},
+                    },
+                ],
+            },
+        ],
+        "menu": {"name": "Main", "items": [{"label": "Home", "url": "/"}]},
+        "post_category": "News",
+        "posts": [
+            {
+                "title": "Hello world",
+                "excerpt": "Our first post.",
+                "body": "Welcome to the blog — replace this with your story.",
+            },
+            {
+                "title": "Getting started",
+                "excerpt": "How this site works.",
+                "body": "Publish pages, write posts, and share the link.",
+            },
+        ],
+    },
 }
 
 
@@ -349,6 +501,26 @@ def apply_template(site: Site, slug: str, *, force: bool = False) -> dict:
             MenuItem.objects.create(
                 menu=menu, label=item["label"], url=item["url"], position=position
             )
+    made_posts = 0
+    if spec.get("posts"):
+        category = PostCategory.objects.create(
+            site=site,
+            name=spec.get("post_category", "General"),
+            slug=unique_slug(
+                PostCategory, site, spec.get("post_category", "General")
+            ),
+        )
+        for post_spec in spec["posts"]:
+            Post.objects.create(
+                site=site,
+                category=category,
+                title=post_spec["title"],
+                slug=unique_slug(Post, site, post_spec["title"]),
+                excerpt=post_spec.get("excerpt", ""),
+                body=post_spec.get("body", ""),
+                status=Post.Statuses.PUBLISHED,
+            )
+            made_posts += 1
     if home_page is not None and site.homepage_id is None:
         site.homepage = home_page
         site.save(update_fields=["homepage", "updated_at"])
@@ -357,6 +529,7 @@ def apply_template(site: Site, slug: str, *, force: bool = False) -> dict:
         "pages": len(spec["pages"]),
         "sections": made_sections,
         "menu": bool(menu_spec),
+        "posts": made_posts,
         "homepage": home_page.slug if home_page else None,
     }
 

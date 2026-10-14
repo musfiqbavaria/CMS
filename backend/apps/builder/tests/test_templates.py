@@ -47,7 +47,7 @@ def test_list_templates(admin_client, site):
     resp = admin_client.get(base(site) + "/templates/")
     assert resp.status_code == 200
     slugs = {t["slug"] for t in resp.json()}
-    assert {"business", "portfolio", "store"} <= slugs
+    assert {"business", "portfolio", "store", "restaurant", "blog"} <= slugs
 
 
 def test_apply_business_template(admin_client, site):
@@ -133,3 +133,48 @@ def test_homepage_selection_and_guards(admin_client, site):
     assert resp.status_code == 400
     resp = admin_client.delete(f"{base(site)}/pages/{draft['id']}/")
     assert resp.status_code == 204
+
+
+def test_restaurant_template(admin_client, site):
+    resp = admin_client.post(
+        base(site) + "/templates/apply/",
+        {"template": "restaurant"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 201, resp.json()
+    assert site.pages.count() == 2
+    home = admin_client.get("/", HTTP_HOST="shop12.test")
+    assert "Fresh from our kitchen" in home.content.decode()
+
+
+def test_blog_template_seeds_posts(admin_client, site):
+    resp = admin_client.post(
+        base(site) + "/templates/apply/",
+        {"template": "blog"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 201, resp.json()
+    assert resp.json()["posts"] == 2
+    assert site.posts.filter(status="published").count() == 2
+    home = admin_client.get("/", HTTP_HOST="shop12.test")
+    assert "Hello world" in home.content.decode()
+
+
+def test_new_sections_start_with_preset_content(admin_client, site):
+    page = admin_client.post(
+        base(site) + "/pages/", {"title": "Home", "status": "published"}
+    ).json()
+    section = admin_client.post(
+        base(site) + f"/pages/{page['id']}/sections/",
+        {"type": "hero"},
+        content_type="application/json",
+    ).json()
+    assert section["settings"]["heading"] == "Welcome to our site"
+    # Explicit settings win over presets.
+    pricing = admin_client.post(
+        base(site) + f"/pages/{page['id']}/sections/",
+        {"type": "pricing", "settings": {"title": "Plans"}},
+        content_type="application/json",
+    ).json()
+    assert pricing["settings"]["title"] == "Plans"
+    assert len(pricing["settings"]["plans"]) == 2

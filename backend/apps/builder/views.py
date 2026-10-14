@@ -133,7 +133,10 @@ class SectionViewSet(SiteScopedMixin, GenericViewSet):
         serializer.is_valid(raise_exception=True)
         section = page.sections.create(
             type=serializer.validated_data["type"],
-            settings=serializer.validated_data.get("settings", {}),
+            settings=services.default_section_settings(
+                serializer.validated_data["type"],
+                serializer.validated_data.get("settings", {}),
+            ),
             enabled=serializer.validated_data.get("enabled", True),
             position=page.sections.count(),
         )

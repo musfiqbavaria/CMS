@@ -150,6 +150,16 @@ Open:
 - Site publish bar on the Pages page: live status, theme, View-live link,
   Publish/Unpublish site (activation gate for public rendering).
 
+## Builder organization (Phase 15)
+
+- Sidebar groups the builder by workflow (Build vs Content) and `/builder`
+  is a guided Overview hub: a 7-step checklist (template → theme → homepage
+  → menu → published content → site live → custom domain) with deep links.
+- Five starter templates (Business, Portfolio, Store, Restaurant, Blog);
+  the Blog pack seeds a category plus sample posts.
+- New sections start with editable sample content per type — replace, don't
+  start blank.
+
 ## Hosted sites (Phase 10)
 
 Built sites are hosted on this same platform, Google-Sites style. Each site

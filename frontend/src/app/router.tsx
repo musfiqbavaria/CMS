@@ -67,6 +67,7 @@ const SectionsPage = lazy(resilient(() => import("../features/builder/pages/Sect
 const ThemesPage = lazy(resilient(() => import("../features/builder/pages/ThemesPage")));
 const TemplatesPage = lazy(resilient(() => import("../features/builder/pages/TemplatesPage")));
 const BuildSitePage = lazy(resilient(() => import("../features/builder/pages/BuildSitePage")));
+const BuilderHome = lazy(resilient(() => import("../features/builder/pages/BuilderHome")));
 const SitesPage = lazy(resilient(() => import("../features/sites/pages/SitesPage")));
 const VerifyPage = lazy(resilient(() => import("../features/sites/pages/VerifyPage")));
 const NewSitePage = lazy(resilient(() => import("../features/sites/pages/NewSitePage")));
@@ -94,6 +95,7 @@ export const router = createBrowserRouter([
           { path: "/websites/:id/edit", element: lazyPage(<EditorPage />) },
           { path: "/websites/:id/setup", element: lazyPage(<SetupPage />) },
           { path: "/websites/:id/mappings", element: lazyPage(<MappingsPage />) },
+          { path: "/builder", element: lazyPage(<BuilderHome />) },
           { path: "/builder/pages", element: lazyPage(<PagesPage />) },
           { path: "/builder/new", element: lazyPage(<BuildSitePage />) },
           { path: "/builder/pages/:pageId", element: lazyPage(<PageEditorPage />) },

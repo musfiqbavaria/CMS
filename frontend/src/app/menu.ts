@@ -1,4 +1,5 @@
 import {
+  Compass,
   FileText,
   Globe,
   Hammer,
@@ -40,15 +41,21 @@ export const MENU: MenuSection[] = [
   {
     title: "Build",
     items: [
+      { to: "/builder", label: "Overview", icon: Compass },
       { to: "/builder/new", label: "Build Website", icon: Hammer },
-      { to: "/builder/pages", label: "Pages", icon: FileText },
-      { to: "/builder/sections", label: "Sections", icon: ListTree },
+      { to: "/templates", label: "Templates", icon: LayoutTemplate },
       { to: "/builder/themes", label: "Themes", icon: Palette },
       { to: "/builder/menus", label: "Menus", icon: ListTree },
+      { to: "/media", label: "Media Library", icon: Image },
+    ],
+  },
+  {
+    title: "Content",
+    items: [
+      { to: "/builder/pages", label: "Pages", icon: FileText },
+      { to: "/builder/sections", label: "Sections", icon: ListTree },
       { to: "/builder/posts", label: "Posts", icon: Newspaper },
       { to: "/builder/products", label: "Products", icon: ShoppingBag },
-      { to: "/media", label: "Media Library", icon: Image },
-      { to: "/templates", label: "Templates", icon: LayoutTemplate },
     ],
   },
   {

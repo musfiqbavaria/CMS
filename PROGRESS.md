@@ -32,6 +32,18 @@ Living file: completed phases, key decisions, next steps.
   suite + lint + build green; prod rebuild + smoke green.
 - Next: Phase 13 per-host TLS automation, cache keys, monitoring per URL.
 
+### Phase 15 - Builder organization: hub, presets, more templates (done)
+- Sidebar regrouped by workflow (Build: Overview/Build Website/Templates/
+  Themes/Menus/Media; Content: Pages/Sections/Posts/Products).
+- New `/builder` Overview hub: progress checklist (template → theme →
+  homepage → menu → published content → site live → custom domain) with
+  deep links, plus publish bar.
+- Section presets: new sections start with editable sample content
+  (explicit settings always win).
+- Two new starter templates (Restaurant, Blog with sample category + posts).
+- Tests: 4 new pytest (list/restaurant/blog/presets); full suite + lint +
+  build green; prod rebuild + smoke green.
+
 ### Phase 14 - Admin UX polish (done)
 - Shared kit upgrade (backward compatible): Button variants, Badge, PageHeader,
   EmptyState, Spinner, shared CopyButton, relative-time helper; removed dead
