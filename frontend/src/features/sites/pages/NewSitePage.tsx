@@ -45,6 +45,7 @@ export default function NewSitePage() {
         serverError={serverError}
         onClose={() => navigate("/websites")}
         onSubmit={submit}
+        createMode="connected"
       />
     </div>
   );

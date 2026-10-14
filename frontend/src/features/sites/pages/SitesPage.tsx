@@ -350,6 +350,7 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
         serverError={formError}
         onClose={() => setFormOpen(false)}
         onSubmit={submitForm}
+        createMode="connected"
       />
       <DeleteConfirmModal
         open={deleting !== null}

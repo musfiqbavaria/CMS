@@ -1,6 +1,7 @@
 import {
   FileText,
   Globe,
+  Hammer,
   Image,
   LayoutDashboard,
   LayoutTemplate,
@@ -39,6 +40,7 @@ export const MENU: MenuSection[] = [
   {
     title: "Build",
     items: [
+      { to: "/builder/new", label: "Build Website", icon: Hammer },
       { to: "/builder/pages", label: "Pages", icon: FileText },
       { to: "/builder/sections", label: "Sections", icon: ListTree },
       { to: "/builder/themes", label: "Themes", icon: Palette },

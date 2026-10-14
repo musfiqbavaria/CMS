@@ -14,7 +14,7 @@ describe("Sidebar", () => {
         <SidebarDesktop />
       </MemoryRouter>,
     );
-    for (const label of ["Dashboard", "Websites", "Add Website", "Pages", "Media Library", "Monitoring", "Audit Logs", "Users & Roles", "Settings"]) {
+    for (const label of ["Dashboard", "Websites", "Add Website", "Build Website", "Pages", "Media Library", "Monitoring", "Audit Logs", "Users & Roles", "Settings"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     useAuthStore.getState().clearSession();

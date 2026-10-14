@@ -11,6 +11,8 @@ interface Props {
   serverError: string | null;
   onClose: () => void;
   onSubmit: (values: SiteSchemaValues) => void;
+  /** Create forms: "both" (chooser), "hosted" (build flow) or "connected" (Websites flow). */
+  createMode?: "both" | "hosted" | "connected";
 }
 
 const PLATFORM_BASE = ((import.meta.env.VITE_PLATFORM_BASE_DOMAIN as string | undefined) ?? "")
@@ -29,7 +31,7 @@ function managedLabel(domain: string): string {
   return host.split(".")[0] ?? "";
 }
 
-export default function SiteFormModal({ open, site, busy, serverError, onClose, onSubmit }: Props) {
+export default function SiteFormModal({ open, site, busy, serverError, onClose, onSubmit, createMode = "both" }: Props) {
   const form = useForm<SiteSchemaValues>({
     resolver: zodResolver(siteSchema),
     defaultValues: { name: "", domain: "", subdomain: "", type: "built", integration_mode: "connector" },
@@ -55,7 +57,7 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
           integration_mode: site.integration_mode,
         });
       } else {
-        setPath("hosted");
+        setPath(createMode === "connected" ? "connected" : "hosted");
         setMode("custom");
         form.reset({ name: "", domain: "", subdomain: "", type: "built", integration_mode: "connector" });
       }
@@ -101,8 +103,8 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
-        <h2 className="text-lg font-bold">{editing ? "Edit website" : "Add website"}</h2>
-        {!editing && (
+        <h2 className="text-lg font-bold">{editing ? "Edit website" : createMode === "hosted" ? "Build a new website" : "Add website"}</h2>
+        {!editing && createMode === "both" && (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"

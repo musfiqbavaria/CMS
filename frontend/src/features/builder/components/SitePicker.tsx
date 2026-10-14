@@ -13,8 +13,8 @@ export default function SitePicker({ hint }: { hint?: string }) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-6 text-center dark:border-slate-700 dark:bg-slate-800">
         <p className="text-sm">No built sites yet.</p>
-        <Link to="/websites/new" className="mt-2 inline-block rounded bg-slate-900 px-4 py-2 text-sm text-white">
-          Add a website (choose “Built”)
+        <Link to="/builder/new" className="mt-2 inline-block rounded bg-slate-900 px-4 py-2 text-sm text-white">
+          Build a website
         </Link>
       </div>
     );
