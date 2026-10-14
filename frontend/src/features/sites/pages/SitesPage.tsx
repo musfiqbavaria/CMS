@@ -13,6 +13,7 @@ import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import HistoryModal from "../components/HistoryModal";
 import SiteFormModal from "../components/SiteFormModal";
 import { StatusBadge, TypeBadge, VerificationBadge } from "../components/StatusBadge";
+import { useBuilderStore } from "../../../stores/builder";
 import { Button, Card, EmptyState, PageHeader, Skeleton } from "../../../shared/ui/kit";
 
 const PAGE_SIZES = [10, 25, 50];
@@ -102,8 +103,8 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
         if (site.type === "connected") {
           navigate(`/websites/${site.id}/verify`);
         } else {
-          setPage(1);
-          setBanner({ kind: "ok", text: `Added ${site.domain}.` });
+          useBuilderStore.getState().setSiteId(site.id);
+          navigate("/templates");
         }
       },
       onError: (e) => setFormError(serverMessage(e)),

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCreateSite } from "../api";
 import SiteFormModal from "../components/SiteFormModal";
+import { useBuilderStore } from "../../../stores/builder";
 import type { SiteSchemaValues } from "../schemas";
 
 function serverMessage(err: unknown): string {
@@ -26,7 +27,8 @@ export default function NewSitePage() {
         if (site.type === "connected") {
           navigate(`/websites/${site.id}/verify`);
         } else {
-          navigate("/websites");
+          useBuilderStore.getState().setSiteId(site.id);
+          navigate("/templates");
         }
       },
       onError: (e) => setServerError(serverMessage(e)),
