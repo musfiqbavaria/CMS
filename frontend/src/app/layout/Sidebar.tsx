@@ -34,6 +34,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 onClick={onNavigate}
                 title={item.label}
                 className={({ isActive }) =>

@@ -22,6 +22,8 @@ export interface MenuEntry {
   to: string;
   label: string;
   icon: LucideIcon;
+  /** Exact match only (parent entries like /, /websites, /builder). */
+  end?: boolean;
 }
 
 export interface MenuSection {
@@ -33,15 +35,15 @@ export const MENU: MenuSection[] = [
   {
     title: "Manage",
     items: [
-      { to: "/", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/websites", label: "Websites", icon: Globe },
+      { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
+      { to: "/websites", label: "Websites", icon: Globe, end: true },
       { to: "/websites/new", label: "Add Website", icon: PlusCircle },
     ],
   },
   {
     title: "Build",
     items: [
-      { to: "/builder", label: "Overview", icon: Compass },
+      { to: "/builder", label: "Overview", icon: Compass, end: true },
       { to: "/builder/new", label: "Build Website", icon: Hammer },
       { to: "/templates", label: "Templates", icon: LayoutTemplate },
       { to: "/builder/themes", label: "Themes", icon: Palette },
