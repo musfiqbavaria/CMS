@@ -21,7 +21,6 @@ const PLATFORM_BASE = ((import.meta.env.VITE_PLATFORM_BASE_DOMAIN as string | un
   .replace(/\.$/, "");
 
 type CreatePath = "hosted" | "connected";
-type AddressMode = "subdomain" | "custom";
 
 function managedLabel(domain: string): string {
   const host = domain.trim().toLowerCase();
@@ -31,24 +30,34 @@ function managedLabel(domain: string): string {
   return host.split(".")[0] ?? "";
 }
 
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 63);
+}
+
 export default function SiteFormModal({ open, site, busy, serverError, onClose, onSubmit, createMode = "both" }: Props) {
   const form = useForm<SiteSchemaValues>({
     resolver: zodResolver(siteSchema),
     defaultValues: { name: "", domain: "", subdomain: "", type: "built", integration_mode: "connector" },
   });
   const [path, setPath] = useState<CreatePath>("hosted");
-  const [mode, setMode] = useState<AddressMode>("custom");
+  const [autoSub, setAutoSub] = useState(true);
 
+  const watchedName = form.watch("name");
   const watchedSubdomain = form.watch("subdomain");
+  const watchedDomain = form.watch("domain");
   const subdomainsEnabled = PLATFORM_BASE.length > 0;
-  const useSubdomain = !site && path === "hosted" && subdomainsEnabled && mode === "subdomain";
 
   useEffect(() => {
     if (open) {
+      setAutoSub(true);
       if (site) {
         const managed = site.is_managed;
         setPath(site.type === "built" ? "hosted" : "connected");
-        setMode(managed ? "subdomain" : "custom");
         form.reset({
           name: site.name,
           domain: managed ? "" : site.domain,
@@ -58,7 +67,6 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
         });
       } else {
         setPath(createMode === "connected" ? "connected" : "hosted");
-        setMode("custom");
         form.reset({ name: "", domain: "", subdomain: "", type: "built", integration_mode: "connector" });
       }
     }
@@ -70,16 +78,26 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
     }
   }, [open, site, path, form]);
 
+  // Auto-generate the subdomain from the site name until the user edits it.
+  useEffect(() => {
+    if (open && !site && autoSub && subdomainsEnabled) {
+      form.setValue("subdomain", slugify(watchedName ?? ""), { shouldValidate: true });
+    }
+  }, [open, site, autoSub, subdomainsEnabled, watchedName, form]);
+
   if (!open) return null;
 
   const editing = site !== null;
+  const customDomain = (watchedDomain ?? "").trim();
 
   function submit(values: SiteSchemaValues) {
     if (!editing && path === "hosted") {
-      if (useSubdomain) {
-        onSubmit({ ...values, type: "built", domain: "", subdomain: (values.subdomain ?? "").trim().toLowerCase() });
+      if (customDomain) {
+        onSubmit({ ...values, type: "built", subdomain: "", domain: customDomain });
       } else {
-        onSubmit({ ...values, type: "built", subdomain: "", domain: (values.domain ?? "").trim() });
+        // Blank subdomain is fine: the server allocates one from the name
+        // against this environment's base domain.
+        onSubmit({ ...values, type: "built", domain: "", subdomain: (values.subdomain ?? "").trim().toLowerCase() });
       }
       return;
     }
@@ -87,17 +105,18 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
       onSubmit({ ...values, type: "connected", subdomain: "", domain: (values.domain ?? "").trim() });
       return;
     }
-    // Edit: keep stored type, clear the inactive address field.
-    if (useSubdomain) {
-      onSubmit({ ...values, domain: "" });
-    } else {
-      onSubmit({ ...values, subdomain: "" });
-    }
+    // Edit: only send address fields the user actually filled in.
+    const patch: SiteSchemaValues = { ...values };
+    if (!(values.domain ?? "").trim()) delete (patch as Record<string, unknown>).domain;
+    if (!(values.subdomain ?? "").trim()) delete (patch as Record<string, unknown>).subdomain;
+    onSubmit(patch);
   }
 
-  const previewHost = useSubdomain
-    ? `${(watchedSubdomain ?? "").trim().toLowerCase() || "your-name"}.${PLATFORM_BASE}`
-    : null;
+  const previewHost = customDomain || (
+    subdomainsEnabled
+      ? `${(watchedSubdomain ?? "").trim().toLowerCase() || "your-name"}.${PLATFORM_BASE}`
+      : null
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -157,56 +176,42 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
           )}
 
           {(!editing && path === "hosted") || (editing && site?.type === "built") ? (
-            <div>
-              {subdomainsEnabled && (
-                <div className="mb-2 flex gap-2 text-sm">
-                  <button
-                    type="button"
-                    onClick={() => setMode("subdomain")}
-                    aria-pressed={mode === "subdomain"}
-                    className={`flex-1 rounded border px-3 py-2 ${mode === "subdomain" ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900" : "dark:border-slate-600"}`}
-                  >
-                    Free subdomain
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode("custom")}
-                    aria-pressed={mode === "custom"}
-                    className={`flex-1 rounded border px-3 py-2 ${mode === "custom" ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900" : "dark:border-slate-600"}`}
-                  >
-                    Custom domain
-                  </button>
-                </div>
-              )}
-              {useSubdomain ? (
+            <div className="space-y-3">
+              {subdomainsEnabled ? (
                 <div>
-                  <label className="text-sm font-medium" htmlFor="site-subdomain">Subdomain</label>
+                  <label className="text-sm font-medium" htmlFor="site-subdomain">Site address</label>
                   <div className="mt-1 flex items-center gap-1">
                     <input
                       id="site-subdomain"
                       placeholder="mysite"
                       className="w-full rounded border p-2 dark:border-slate-600 dark:bg-slate-700"
-                      {...form.register("subdomain")}
+                      {...form.register("subdomain", { onChange: () => setAutoSub(false) })}
                     />
                     <span className="whitespace-nowrap text-sm text-slate-500">.{PLATFORM_BASE}</span>
                   </div>
                   {form.formState.errors.subdomain && <p className="text-xs text-red-600">{form.formState.errors.subdomain.message}</p>}
-                  <p className="mt-1 text-xs text-slate-500">
-                    Your site will live at <span className="font-mono">https://{previewHost}</span> on this platform.
-                  </p>
+                  {previewHost && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {autoSub && !editing ? "Auto-generated from the name — edit it or leave it. " : ""}
+                      Your site will live at <span className="font-mono">https://{previewHost}</span>.
+                    </p>
+                  )}
                 </div>
               ) : (
-                <div>
-                  <label className="text-sm font-medium" htmlFor="site-domain">Domain</label>
-                  <input id="site-domain" placeholder="mysite.com" className="mt-1 w-full rounded border p-2 dark:border-slate-600 dark:bg-slate-700" {...form.register("domain")} />
-                  {form.formState.errors.domain && <p className="text-xs text-red-600">{form.formState.errors.domain.message}</p>}
-                  <p className="mt-1 text-xs text-slate-500">
-                    {subdomainsEnabled
-                      ? "Point your domain's DNS at this server. You can attach more addresses later under Domains."
-                      : "Free subdomains are disabled (no platform base domain configured). Point your domain's DNS at this server."}
-                  </p>
-                </div>
+                <p className="rounded bg-amber-50 p-2 text-xs text-amber-700">
+                  Free subdomains are disabled here (no platform base domain configured) — enter your own domain below.
+                </p>
               )}
+              <div>
+                <label className="text-sm font-medium" htmlFor="site-domain">
+                  Custom domain <span className="font-normal text-slate-400">(optional)</span>
+                </label>
+                <input id="site-domain" placeholder="mysite.com" className="mt-1 w-full rounded border p-2 dark:border-slate-600 dark:bg-slate-700" {...form.register("domain")} />
+                {form.formState.errors.domain && <p className="text-xs text-red-600">{form.formState.errors.domain.message}</p>}
+                <p className="mt-1 text-xs text-slate-500">
+                  Prefer your own domain? Enter it here — it takes precedence. Point its DNS at this server; you can attach more addresses later under Domains.
+                </p>
+              </div>
             </div>
           ) : null}
 

@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from . import hosting
@@ -153,9 +154,31 @@ class SiteSerializer(serializers.ModelSerializer):
                 composed, instance=self.instance
             )
         elif not self.instance and not (data.get("domain") or "").strip():
-            raise serializers.ValidationError(
-                {"domain": "Domain is required. Use a subdomain or a custom domain."}
-            )
+            if site_type == Site.Types.BUILT:
+                # No address given: auto-allocate a free subdomain from the
+                # name, resolved against this environment's base domain.
+                try:
+                    label = hosting.allocate_subdomain(
+                        data.get("name")
+                        or (self.instance.name if self.instance else ""),
+                    )
+                except DjangoValidationError as exc:
+                    raise serializers.ValidationError(
+                        {
+                            "domain": "Enter a custom domain, or set "
+                            "PLATFORM_BASE_DOMAIN to enable free subdomains."
+                        }
+                    ) from exc
+                data["domain"] = hosting.validate_public_hostname(
+                    f"{label}.{hosting.platform_base_domain()}",
+                    instance=self.instance,
+                )
+            else:
+                raise serializers.ValidationError(
+                    {
+                        "domain": "Domain is required. Use a subdomain or a custom domain."
+                    }
+                )
         data.pop("subdomain", None)
         return data
 

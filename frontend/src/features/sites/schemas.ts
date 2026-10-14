@@ -42,11 +42,8 @@ export const siteSchema = z
       return;
     }
     if (!domain && !subdomain) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["domain"],
-        message: "Use a subdomain or enter a custom domain.",
-      });
+      // Built sites only reach here (connected returns above): the server
+      // auto-allocates a free subdomain from the name, so empty is valid.
       return;
     }
     if (domain && subdomain) {

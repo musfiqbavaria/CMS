@@ -37,7 +37,8 @@ describe("siteSchema", () => {
   it("supports free-subdomain creation for built sites", () => {
     const built = { name: "Shop", type: "built", integration_mode: "connector" } as const;
     expect(siteSchema.safeParse({ ...built, subdomain: "myshop" }).success).toBe(true);
-    expect(siteSchema.safeParse({ ...built }).success).toBe(false);
+    // No address: the server auto-allocates a subdomain from the name.
+    expect(siteSchema.safeParse({ ...built }).success).toBe(true);
     expect(siteSchema.safeParse({ ...built, subdomain: "myshop", domain: "acme.com" }).success).toBe(false);
     expect(siteSchema.safeParse({ ...built, subdomain: "BAD NAME!" }).success).toBe(false);
     expect(

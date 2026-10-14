@@ -71,6 +71,25 @@ def test_create_built_site_with_subdomain(admin_client):
 
 
 @override_settings(PLATFORM_BASE_DOMAIN="sites.example.com")
+def test_create_built_with_name_only_auto_allocates(admin_client):
+    resp = admin_client.post(
+        SITES_URL,
+        {"name": "My Awesome Shop", "type": "built"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 201, resp.json()
+    assert resp.json()["domain"] == "my-awesome-shop.sites.example.com"
+    # A colliding name gets a numeric suffix.
+    resp = admin_client.post(
+        SITES_URL,
+        {"name": "My Awesome Shop!", "type": "built"},
+        content_type="application/json",
+    )
+    assert resp.status_code == 201, resp.json()
+    assert resp.json()["domain"] == "my-awesome-shop-2.sites.example.com"
+
+
+@override_settings(PLATFORM_BASE_DOMAIN="sites.example.com")
 def test_create_built_site_with_custom_domain(admin_client):
     resp = post_site(admin_client, domain="acme-store.com")
     assert resp.status_code == 201, resp.json()
