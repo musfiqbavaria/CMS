@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useSite } from "../api";
 import { useAddDomain, useCheckDomain, useDeleteDomain, useMakePrimary, useSiteDomains } from "../domains";
 import type { SiteDomain } from "../types";
+import { publicSiteUrl } from "../links";
 import { Card, CardTitle, CopyButton, Skeleton } from "../../../shared/ui/kit";
 
 function serverMessage(err: unknown): string {
@@ -134,7 +135,7 @@ export default function DomainsPage() {
             {(domains ?? []).map((d) => (
               <li key={d.id} className="rounded border p-3 dark:border-slate-700">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <a href={`https://${d.hostname}`} target="_blank" rel="noopener noreferrer" className="font-mono font-medium hover:underline">
+                  <a href={publicSiteUrl(d.hostname)} target="_blank" rel="noopener noreferrer" className="font-mono font-medium hover:underline">
                     {d.hostname}
                   </a>
                   {d.is_primary && <span className="rounded bg-slate-900 px-1.5 py-0.5 text-xs text-white">primary</span>}

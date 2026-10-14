@@ -14,6 +14,7 @@ import HistoryModal from "../components/HistoryModal";
 import SiteFormModal from "../components/SiteFormModal";
 import { StatusBadge, TypeBadge, VerificationBadge } from "../components/StatusBadge";
 import { useBuilderStore } from "../../../stores/builder";
+import { publicSiteUrl } from "../links";
 import { Button, Card, EmptyState, PageHeader, Skeleton } from "../../../shared/ui/kit";
 
 const PAGE_SIZES = [10, 25, 50];
@@ -300,7 +301,7 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
                     <td className="py-2 text-right">
                       <div className="inline-flex flex-wrap justify-end gap-1">
                         <Link to={`/websites/${site.id}/edit`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Edit</Link>
-                        <a href={site.public_url || `https://${site.domain}`} target="_blank" rel="noopener noreferrer" className="rounded border px-2 py-1 text-xs dark:border-slate-600">
+                        <a href={publicSiteUrl(site.public_url || site.domain)} target="_blank" rel="noopener noreferrer" className="rounded border px-2 py-1 text-xs dark:border-slate-600">
   Open
 </a>
                         <Link to={`/websites/${site.id}/setup`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Setup</Link>
