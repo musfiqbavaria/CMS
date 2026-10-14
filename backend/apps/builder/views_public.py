@@ -68,7 +68,7 @@ def sitemap(request):
     site = _site(request)
     if site is None:
         return HttpResponseNotFound("Not found.", content_type="text/plain")
-    key = f"builder:sitemap:{site.domain}"
+    key = f"builder:sitemap:{site.pk}"
     xml = cache.get(key)
     if xml is None:
         xml = services.build_sitemap_xml(site)

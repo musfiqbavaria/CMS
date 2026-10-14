@@ -298,8 +298,8 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
                     <td className="py-2 text-right">
                       <div className="inline-flex flex-wrap justify-end gap-1">
                         <Link to={`/websites/${site.id}/edit`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Edit</Link>
-                        <a href={`https://${site.domain}`} target="_blank" rel="noopener noreferrer" className="rounded border px-2 py-1 text-xs dark:border-slate-600">
-  View
+                        <a href={site.public_url || `https://${site.domain}`} target="_blank" rel="noopener noreferrer" className="rounded border px-2 py-1 text-xs dark:border-slate-600">
+  Open
 </a>
                         <Link to={`/websites/${site.id}/setup`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Setup</Link>
                         {site.type === "connected" && (

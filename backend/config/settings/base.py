@@ -139,6 +139,14 @@ CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
 
+# --- Hosted sites (Phase 10): free <slug>.<base> subdomains + custom domains ---
+# All customer sites are served from this same host (Nginx server_name _);
+# Django ALLOWED_HOSTS must cover the base domain AND its subdomains, e.g.
+# DJANGO_ALLOWED_HOSTS=example.com,.example.com (leading dot = subdomains).
+PLATFORM_BASE_DOMAIN = (
+    os.environ.get("PLATFORM_BASE_DOMAIN", "").strip().lower().rstrip(".")
+)
+
 # --- Auth: custom user model (roles, lockout, TOTP 2FA) ---
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))

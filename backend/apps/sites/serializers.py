@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from . import hosting
 from .models import Site
 
 
@@ -7,6 +8,10 @@ class SiteSerializer(serializers.ModelSerializer):
     created_by_username = serializers.CharField(
         source="created_by.username", read_only=True
     )
+    # Write-only: built sites may be created as <slug>.<PLATFORM_BASE_DOMAIN>.
+    subdomain = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    is_managed = serializers.SerializerMethodField()
+    public_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Site
@@ -14,6 +19,9 @@ class SiteSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "domain",
+            "subdomain",
+            "is_managed",
+            "public_url",
             "site_key",
             "type",
             "status",
@@ -32,6 +40,7 @@ class SiteSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        extra_kwargs = {"domain": {"required": False, "allow_blank": True}}
         read_only_fields = [
             "id",
             "site_key",
@@ -52,15 +61,62 @@ class SiteSerializer(serializers.ModelSerializer):
         ]
 
     def validate_domain(self, value):
-        domain = Site.normalize_domain(value)
-        if not domain or "." not in domain or " " in domain:
-            raise serializers.ValidationError("Enter a valid domain, e.g. example.com.")
-        qs = Site.objects.filter(domain=domain)
-        if self.instance is not None:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError("A site with this domain already exists.")
-        return domain
+        if not (value or "").strip():
+            # Blank is allowed at field level so validate() can compose the
+            # domain from `subdomain`; presence is enforced there.
+            return ""
+        return hosting.validate_public_hostname(value, instance=self.instance)
+
+    def get_is_managed(self, obj) -> bool:
+        return hosting.is_managed_hostname(obj.domain)
+
+    def get_public_url(self, obj) -> str:
+        return hosting.canonical_url(obj)
+
+    def validate(self, data):
+        subdomain = (data.get("subdomain") or "").strip().lower()
+        site_type = data.get("type") or (
+            self.instance.type if self.instance else Site.Types.CONNECTED
+        )
+        if subdomain:
+            if site_type != Site.Types.BUILT:
+                raise serializers.ValidationError(
+                    {"subdomain": "Free subdomains are only available for built sites."}
+                )
+            base = hosting.platform_base_domain()
+            if not base:
+                raise serializers.ValidationError(
+                    {
+                        "subdomain": "Free subdomains are not enabled: "
+                        "set PLATFORM_BASE_DOMAIN."
+                    }
+                )
+            from django.utils.text import slugify
+
+            slug = slugify(subdomain)
+            if not slug:
+                raise serializers.ValidationError(
+                    {"subdomain": "Enter a valid subdomain, e.g. myshop."}
+                )
+            composed = f"{slug}.{base}"
+            if data.get("domain") and hosting.normalize_hostname(
+                data["domain"]
+            ) not in ("", composed):
+                raise serializers.ValidationError(
+                    {
+                        "domain": "Provide either a subdomain or a custom domain, "
+                        "not both."
+                    }
+                )
+            data["domain"] = hosting.validate_public_hostname(
+                composed, instance=self.instance
+            )
+        elif not self.instance and not (data.get("domain") or "").strip():
+            raise serializers.ValidationError(
+                {"domain": "Domain is required. Use a subdomain or a custom domain."}
+            )
+        data.pop("subdomain", None)
+        return data
 
     def validate_name(self, value):
         if not value.strip():

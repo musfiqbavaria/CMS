@@ -136,6 +136,38 @@ Open:
   drag reorder, enable toggles), posts, menus, themes gallery + assign, products
   with variants/stock, cross-page sections list.
 
+## Hosted sites (Phase 10)
+
+Built sites are hosted on this same platform, Google-Sites style. Each site
+has one canonical public address (`Site.domain`), chosen at creation:
+
+- **Free subdomain**: `<slug>.<PLATFORM_BASE_DOMAIN>` (e.g.
+  `myshop.sites.example.com`). Reserved names (`www`, `api`, `admin`, …)
+  and the bare base domain itself cannot be claimed.
+- **Custom domain**: any domain you own (e.g. `acme-store.com`). Point its
+  DNS at this server. Automated ownership proof (CNAME + TXT token) arrives
+  in Phase 11; until then custom domains serve once pointed and activated.
+
+How it works:
+
+- `BuilderDomainMiddleware` resolves the request `Host` (case-insensitive)
+  to an active built site; everything else serves the admin SPA. Nginx needs
+  no per-site config (`server_name _` already catches every host).
+- DNS: create a wildcard record `*.sites.example.com → <server IP>` for
+  subdomains, plus `A`/`CNAME` records for each custom domain.
+- Django: `DJANGO_ALLOWED_HOSTS` must list the base with a leading dot for
+  subdomains (`example.com,.example.com`), plus every custom domain (or `*`
+  is NOT recommended in prod).
+- Local testing without DNS: `curl -H "Host: myshop.sites.example.com"
+  http://localhost:8080/` or add entries to `/etc/hosts`.
+- TLS: terminate at Nginx / load balancer. Use one wildcard cert for
+  `*.base` now; per-custom-domain certs (or cert-manager/ACME) come with
+  Phase 11 verification.
+- Roadmap: Phase 11 adds multi-alias hostnames (subdomain AND custom domain
+  on one site) + CNAME/TXT verification UI; Phase 12 hardens the builder
+  (templates, publish flow); Phase 13 covers per-host TLS automation,
+  cache keys, and monitoring per public URL.
+
 ## Monitoring, notifications & audit (Phase 8)
 
 - `HealthCheck` history (uptime/SSL/connector) + `Notification` inbox with a live

@@ -9,6 +9,8 @@ export interface Site {
   id: number;
   name: string;
   domain: string;
+  is_managed: boolean;
+  public_url: string;
   site_key: string;
   type: SiteType;
   status: SiteStatus;
@@ -61,7 +63,8 @@ export interface SiteListParams {
 
 export interface SiteFormValues {
   name: string;
-  domain: string;
+  domain?: string;
+  subdomain?: string;
   type: SiteType;
   integration_mode: IntegrationMode;
 }

@@ -4,6 +4,25 @@ Living file: completed phases, key decisions, next steps.
 
 ## Completed
 
+### Phase 10 - Hosted-site addressing foundation (done)
+- `PLATFORM_BASE_DOMAIN` setting (+ frontend `VITE_PLATFORM_BASE_DOMAIN`):
+  built sites are created as free `<slug>.base` subdomains or on custom
+  domains, all served from this same host (Nginx `server_name _` +
+  `BuilderDomainMiddleware`), Google-Sites style.
+- New `apps/sites/hosting.py`: hostname normalization, managed/subdomain
+  detection, reserved-name guard, public-hostname validation, subdomain
+  allocation. `SiteSerializer` accepts write-only `subdomain`, exposes
+  read-only `is_managed` + `public_url`; middleware matches hosts
+  case-insensitively and never resolves the platform apex; sitemap cache
+  keyed by site pk (survives domain changes).
+- Add-website form offers Free-subdomain vs Custom-domain for built sites
+  with live URL preview; site list rows link out via `public_url`.
+- Tests: 8 new pytest (helpers, subdomain/custom create, guards, middleware)
+  + extended vitest schema cases. Docs: README “Hosted sites”, `.env.example`
+  DNS/TLS/ALLOWED_HOSTS notes.
+- Next: Phase 11 multi-alias hostnames + CNAME/TXT verification UI;
+  Phase 12 builder hardening; Phase 13 per-host TLS/cache/monitoring.
+
 ### Phase 9 - Production Readiness (done)\n- Deploy check now clean: fixed missing DRF `retrieve` actions and schema hints so `manage.py check --deploy` has only SSL-redirect W008 (TLS at Nginx).\n- Security/headers: HSTS + browser security/CSP headers in Nginx; .env secrets ignored; `.env.example` documents auth/upload/retention knobs.\n- Performance: monitoring summary uses a single-pass bounded query (no N+1), cached 30s and invalidated on new check; public connector/admin paths unaffected.\n- Frontend bundle split with route/lazy loading (main bundle ~435 KB vs previous ~959 KB); Nginx serves immutable `/assets` chunks.\n- CI: Redis service + DBURL/env for monitoring socket tests; frontend lint/test/build added; paths run from `backend/`.\n- Prod routing: host-aware Nginx map (`$serve_spa`) restores customer-domain rendering while serving SPA on CMS host; prod RSA/IP stale-DNS mitigation retained.\n- Smoke: production Compose project builds and boots; `/api/health/` 200 through Nginx; backend 81 pytest + 14 vitest + lint/build green.\n\n### Phase 8 - Monitoring, Notifications & Audit (done)
 - `HealthCheck` + `Notification` models/migrations; uptime/SSL/connector services
   with transition-only notifications; `ws/notifications/` socket + frontend hook
