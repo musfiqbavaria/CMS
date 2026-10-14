@@ -13,6 +13,8 @@ interface Props {
   onSubmit: (values: SiteSchemaValues) => void;
   /** Create forms: "both" (chooser), "hosted" (build flow) or "connected" (Websites flow). */
   createMode?: "both" | "hosted" | "connected";
+  /** "modal" overlay (default) or "inline" full-page card. */
+  layout?: "modal" | "inline";
 }
 
 const PLATFORM_BASE = ((import.meta.env.VITE_PLATFORM_BASE_DOMAIN as string | undefined) ?? "")
@@ -39,7 +41,7 @@ function slugify(value: string): string {
     .slice(0, 63);
 }
 
-export default function SiteFormModal({ open, site, busy, serverError, onClose, onSubmit, createMode = "both" }: Props) {
+export default function SiteFormModal({ open, site, busy, serverError, onClose, onSubmit, createMode = "both", layout = "modal" }: Props) {
   const form = useForm<SiteSchemaValues>({
     resolver: zodResolver(siteSchema),
     defaultValues: { name: "", domain: "", subdomain: "", type: "built", integration_mode: "connector" },
@@ -119,9 +121,45 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+    <FormBody
+      editing={editing}
+      createMode={createMode}
+      path={path}
+      setPath={setPath}
+      serverError={serverError}
+      form={form}
+      site={site}
+      subdomainsEnabled={subdomainsEnabled}
+      autoSub={autoSub}
+      setAutoSub={setAutoSub}
+      previewHost={previewHost}
+      busy={busy}
+      onClose={onClose}
+      submit={submit}
+      layout={layout}
+    />
+  );
+}
+
+function FormBody({ editing, createMode, path, setPath, serverError, form, site, subdomainsEnabled, autoSub, setAutoSub, previewHost, busy, onClose, submit, layout }: {
+  editing: boolean;
+  createMode: "both" | "hosted" | "connected";
+  path: CreatePath;
+  setPath: (p: CreatePath) => void;
+  serverError: string | null;
+  form: ReturnType<typeof useForm<SiteSchemaValues>>;
+  site: Site | null;
+  subdomainsEnabled: boolean;
+  autoSub: boolean;
+  setAutoSub: (v: boolean) => void;
+  previewHost: string | null;
+  busy: boolean;
+  onClose: () => void;
+  submit: (values: SiteSchemaValues) => void;
+  layout: "modal" | "inline";
+}) {
+  const content = (
+    <>
         <h2 className="text-lg font-bold">{editing ? "Edit website" : createMode === "hosted" ? "Build a new website" : "Add website"}</h2>
         {!editing && createMode === "both" && (
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -237,6 +275,21 @@ export default function SiteFormModal({ open, site, busy, serverError, onClose, 
             </button>
           </div>
         </form>
+    </>
+  );
+
+  if (layout === "inline") {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        {content}
+      </div>
+    );
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800">
+        {content}
       </div>
     </div>
   );
