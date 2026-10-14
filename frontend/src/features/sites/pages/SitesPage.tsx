@@ -13,7 +13,7 @@ import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import HistoryModal from "../components/HistoryModal";
 import SiteFormModal from "../components/SiteFormModal";
 import { StatusBadge, TypeBadge, VerificationBadge } from "../components/StatusBadge";
-import { Card, Skeleton } from "../../../shared/ui/kit";
+import { Button, Card, EmptyState, PageHeader, Skeleton } from "../../../shared/ui/kit";
 
 const PAGE_SIZES = [10, 25, 50];
 
@@ -172,12 +172,11 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Websites</h1>
-        <button onClick={openNew} className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-slate-900">
-          Add website
-        </button>
-      </div>
+      <PageHeader
+        title="Websites"
+        description="Every site you manage — connected or built — lives here."
+        actions={<Button variant="primary" onClick={openNew}>Add website</Button>}
+      />
 
       {banner && (
         <p
@@ -242,9 +241,11 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
               </button>
             </div>
           ) : data.results.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">
-              No websites yet. Click “Add website” to register your first domain.
-            </p>
+            <EmptyState
+              title="No websites yet"
+              hint="Register your first domain or spin up a built site on a free subdomain."
+              action={<Button variant="primary" onClick={openNew}>Add website</Button>}
+            />
           ) : (
             <table className="w-full text-left text-sm">
               <thead>

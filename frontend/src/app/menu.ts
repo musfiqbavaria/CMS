@@ -20,8 +20,6 @@ export interface MenuEntry {
   to: string;
   label: string;
   icon: LucideIcon;
-  /** Phase that implements the page; undefined = implemented now. */
-  phase?: number;
 }
 
 export interface MenuSection {

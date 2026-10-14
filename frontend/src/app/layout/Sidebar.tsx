@@ -11,17 +11,22 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-2 border-b border-slate-200 px-4 dark:border-slate-700">
-        <span className="flex h-8 w-8 items-center justify-center rounded bg-slate-900 text-sm font-bold text-white dark:bg-white dark:text-slate-900">
+      <div className="flex h-16 items-center gap-2.5 border-b border-slate-200 px-4 dark:border-slate-700">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-sm font-bold text-white dark:from-white dark:to-slate-300 dark:text-slate-900">
           {initial}
         </span>
-        {!collapsed && <span className="text-sm font-bold">CMS Platform</span>}
+        {!collapsed && (
+          <span className="leading-tight">
+            <span className="block text-sm font-bold">CMS Platform</span>
+            <span className="block text-[11px] text-slate-400">Site manager</span>
+          </span>
+        )}
       </div>
       <nav className="flex-1 overflow-y-auto p-2">
         {MENU.map((section) => (
-          <div key={section.title} className="mb-2">
+          <div key={section.title} className="mb-3">
             {!collapsed && (
-              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 {section.title}
               </p>
             )}
@@ -32,10 +37,10 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                 onClick={onNavigate}
                 title={item.label}
                 className={({ isActive }) =>
-                  `mb-0.5 flex items-center gap-2 rounded px-2 py-2 text-sm ${
+                  `mb-0.5 flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors ${
                     isActive
-                      ? "bg-slate-900 font-medium text-white dark:bg-white dark:text-slate-900"
-                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                      ? "bg-slate-900 font-medium text-white shadow-sm dark:bg-white dark:text-slate-900"
+                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700/60"
                   } ${collapsed ? "justify-center" : ""}`
                 }
               >
@@ -47,7 +52,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
       <div className="border-t border-slate-200 p-3 text-xs text-slate-400 dark:border-slate-700">
-        {!collapsed && <p>Signed in as {user?.username}</p>}
+        {!collapsed && <p className="truncate">Signed in as <span className="font-medium text-slate-500 dark:text-slate-300">{user?.username}</span></p>}
       </div>
     </div>
   );

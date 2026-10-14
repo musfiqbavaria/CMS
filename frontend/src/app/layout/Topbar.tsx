@@ -7,6 +7,7 @@ import { markAllNotificationsRead } from "../../features/notifications/useNotifi
 import { useAuthStore } from "../../stores/auth";
 import { unreadCount, useNotificationsStore } from "../../stores/notifications";
 import { useUiStore } from "../../stores/ui";
+import { timeAgo } from "../../shared/ui/kit";
 
 export default function Topbar() {
   const navigate = useNavigate();
@@ -23,13 +24,31 @@ export default function Topbar() {
   const [bellOpen, setBellOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (e.key === "/" && tag !== "INPUT" && tag !== "TEXTAREA") {
+        e.preventDefault();
+        setSearchOpen(true);
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        setSearchOpen(false);
+        setBellOpen(false);
+        setProfileOpen(false);
+      }
+    }
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   const matches =
@@ -62,14 +81,15 @@ export default function Topbar() {
       <div ref={searchRef} className="relative hidden flex-1 sm:block sm:max-w-md">
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
+          ref={searchInputRef}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setSearchOpen(true);
           }}
           onFocus={() => setSearchOpen(true)}
-          placeholder="Search pages…"
-          className="w-full rounded border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+          placeholder="Search pages…  ( / )"
+          className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none focus:border-slate-400 focus:bg-white focus:ring-2 focus:ring-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:border-slate-400 dark:focus:ring-slate-600"
         />
         {searchOpen && matches.length > 0 && (
           <ul className="absolute z-50 mt-1 w-full rounded border border-slate-200 bg-white shadow-lg dark:border-slate-600 dark:bg-slate-800">
@@ -85,7 +105,6 @@ export default function Topbar() {
                 >
                   <m.icon size={16} className="text-slate-400" />
                   {m.label}
-                  {m.phase && <span className="ml-auto text-xs text-slate-400">Phase {m.phase}</span>}
                 </button>
               </li>
             ))}
@@ -135,7 +154,7 @@ export default function Topbar() {
                 {notifications.map((n) => (
                   <li key={n.id} className="border-b border-slate-100 px-3 py-2 text-sm last:border-0 dark:border-slate-700">
                     <p className={n.read ? "text-slate-500" : "font-medium"}>{n.title}</p>
-                    <p className="text-xs text-slate-400">{new Date(n.createdAt).toLocaleString()}</p>
+                    <p className="text-xs text-slate-400" title={new Date(n.createdAt).toLocaleString()}>{timeAgo(n.createdAt)}</p>
                   </li>
                 ))}
               </ul>

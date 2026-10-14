@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../shared/api/client";
-import { Card, CardTitle, Skeleton, StatusDot } from "../../shared/ui/kit";
+import { Card, CardTitle, EmptyState, PageHeader, Skeleton, StatusDot } from "../../shared/ui/kit";
 
 interface CheckSummary {
   site: number;
@@ -49,10 +49,10 @@ export default function MonitoringPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Monitoring</h1>
-      <p className="text-sm text-slate-500">
-        Uptime every 5 min · SSL + connector presence daily. Failures notify here live.
-      </p>
+      <PageHeader
+        title="Monitoring"
+        description="Uptime every 5 min · SSL + connector presence daily. Failures notify here live."
+      />
       {summary.isLoading ? (
         <Skeleton className="h-48" />
       ) : (
@@ -95,7 +95,7 @@ export default function MonitoringPage() {
                   </tr>
                 ))}
                 {(summary.data ?? []).length === 0 && (
-                  <tr><td colSpan={5} className="py-4 text-center text-slate-500">No active sites yet.</td></tr>
+                  <tr><td colSpan={5} className="py-2"><EmptyState title="No active sites yet" hint="Activate a site to start uptime, SSL and connector checks." /></td></tr>
                 )}
               </tbody>
             </table>

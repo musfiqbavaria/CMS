@@ -5,24 +5,7 @@ import { useSite } from "../api";
 import type { ProgressEvent } from "../hooks";
 import { useSiteProgress } from "../hooks";
 import { StatusBadge, VerificationBadge } from "../components/StatusBadge";
-import { Card, CardTitle, Skeleton } from "../../../shared/ui/kit";
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => {
-        void navigator.clipboard.writeText(text).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        });
-      }}
-      className="rounded border px-2 py-1 text-xs dark:border-slate-600"
-    >
-      {copied ? "Copied!" : "Copy"}
-    </button>
-  );
-}
+import { Card, CardTitle, CopyButton, Skeleton } from "../../../shared/ui/kit";
 
 export default function VerifyPage() {
   const { id } = useParams();
