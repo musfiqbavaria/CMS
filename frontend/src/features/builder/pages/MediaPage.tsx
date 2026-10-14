@@ -7,7 +7,7 @@ import type { Paged } from "../../sites/types";
 function useAllMedia() {
   return useQuery({
     queryKey: ["media-all"],
-    queryFn: () => api.get<Paged<MediaAsset>>("/media/?page_size=100").then((r) => r.data),
+    queryFn: () => api.get<Paged<MediaAsset>>("/v1/media/?page_size=100").then((r) => r.data),
   });
 }
 
@@ -26,18 +26,21 @@ export default function MediaPage() {
       const form = new FormData();
       form.append("file", file);
       form.append("alt", alt);
-      await api.post("/media/", form, { headers: { "Content-Type": "multipart/form-data" } });
+      await api.post("/v1/media/", form, { headers: { "Content-Type": "multipart/form-data" } });
       setAlt("");
       refetch();
-    } catch {
-      setError("Upload failed. Use a JPG/PNG/WebP/GIF under 10 MB.");
+    } catch (e: unknown) {
+      const data = (e as { response?: { data?: { detail?: unknown }; status?: number } }).response;
+      const detail = data?.data?.detail;
+      const text = Array.isArray(detail) ? String(detail[0]) : typeof detail === "string" ? detail : null;
+      setError(text ?? (data?.status === 404 ? "Upload endpoint not found. Refresh the app and try again." : "Upload failed. Use a JPG/PNG/WebP/GIF under 10 MB."));
     } finally {
       setBusy(false);
     }
   }
 
   async function onDelete(id: number) {
-    await api.delete(`/media/${id}/`);
+    await api.delete(`/v1/media/${id}/`);
     qc.invalidateQueries({ queryKey: ["media-all"] });
     qc.invalidateQueries({ queryKey: ["media"] });
   }

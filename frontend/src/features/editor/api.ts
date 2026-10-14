@@ -73,7 +73,7 @@ export function useVersions(siteId: number | null) {
 export function useMedia(siteId: number | null) {
   return useQuery({
     queryKey: ["media", siteId],
-    queryFn: () => api.get<Paged<MediaAsset>>(`/media/?site=${siteId}`).then((r) => r.data),
+    queryFn: () => api.get<Paged<MediaAsset>>(`/v1/media/?site=${siteId}`).then((r) => r.data),
     enabled: siteId !== null,
   });
 }
@@ -86,7 +86,7 @@ export function useUploadMedia() {
       form.append("file", input.file, input.filename);
       form.append("site", String(input.siteId));
       form.append("alt", input.alt);
-      return api.post<MediaAsset>("/media/", form, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
+      return api.post<MediaAsset>("/v1/media/", form, { headers: { "Content-Type": "multipart/form-data" } }).then((r) => r.data);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
   });
@@ -95,7 +95,7 @@ export function useUploadMedia() {
 export function useDeleteMedia() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.delete(`/media/${id}/`),
+    mutationFn: (id: number) => api.delete(`/v1/media/${id}/`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
   });
 }
