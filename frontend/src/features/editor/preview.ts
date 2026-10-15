@@ -12,6 +12,8 @@ export function escapeHtml(s: string): string {
 /** Build a standalone preview document from a draft config. */
 export function configToHtml(cfg: SiteConfigDraft): string {
   const t = cfg.theme;
+  const logo = cfg.branding?.logo_url ?? cfg.header.logo_url;
+  const favicon = cfg.branding?.favicon_url;
   const heroBtns = cfg.hero.buttons
     .map(
       (b) =>
@@ -37,14 +39,17 @@ export function configToHtml(cfg: SiteConfigDraft): string {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(cfg.seo.title || cfg.general.site_name)}</title>
 <meta name="description" content="${escapeHtml(cfg.seo.description)}">
+${favicon ? `<link rel="icon" href="${escapeHtml(favicon)}">` : ""}
+<meta name="keywords" content="${escapeHtml(cfg.seo.keywords)}">
+${cfg.seo.og_image ? `<meta property="og:image" content="${escapeHtml(cfg.seo.og_image)}">` : ""}
 <style>body{margin:0;font-family:${escapeHtml(t.typography.body_font)};font-size:${Number(t.typography.base_size) || 16}px;color:${escapeHtml(t.colors.text)};background:${escapeHtml(t.colors.background)}}h1,h2,h3{font-family:${escapeHtml(t.typography.heading_font)}}${cfg.custom.css || ""}</style>
 </head><body>
-<header style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid #eee;${cfg.header.sticky ? "position:sticky;top:0;background:inherit;z-index:10" : ""}">
-<div style="display:flex;align-items:center;gap:12px">${cfg.header.logo_url ? `<img src="${escapeHtml(cfg.header.logo_url)}" alt="logo" style="height:36px">` : `<strong>${escapeHtml(cfg.general.site_name)}</strong>`}</div>
+<header style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid #eee;${cfg.header.layout === "center" ? "flex-direction:column;gap:12px;" : ""}${cfg.header.sticky ? "position:sticky;top:0;background:inherit;z-index:10" : ""}">
+<div style="display:flex;align-items:center;gap:12px">${logo ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(cfg.general.site_name)}" style="height:36px">` : `<strong>${escapeHtml(cfg.general.site_name)}</strong>`}</div>
 <nav>${nav}</nav>
 ${cfg.header.cta_text ? `<a href="${escapeHtml(cfg.header.cta_url)}" style="background:${escapeHtml(t.colors.primary)};color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none">${escapeHtml(cfg.header.cta_text)}</a>` : ""}
 </header>
-${cfg.cover.image_url ? `<div><img src="${escapeHtml(cfg.cover.image_url)}" alt="cover" style="width:100%;max-height:320px;object-fit:cover"></div>` : ""}
+${cfg.cover.image_url ? `<div style="position:relative"><img src="${escapeHtml(cfg.cover.image_url)}" alt="cover" style="display:block;width:100%;max-height:320px;object-fit:cover"><div style="position:absolute;inset:0;background:#000;pointer-events:none;opacity:${Math.min(1, Math.max(0, Number(cfg.cover.overlay_opacity) || 0))}"></div></div>` : ""}
 <section style="position:relative;padding:80px 24px;text-align:${textAlign};${cfg.hero.background_image ? `background:url('${escapeHtml(cfg.hero.background_image)}') center/cover;` : `background:${escapeHtml(t.colors.background)}`}display:flex;flex-direction:column;align-items:${align}">
 ${cfg.hero.background_image ? `<div style="position:absolute;inset:0;background:#000;opacity:${Number(cfg.hero.overlay_opacity) || 0}"></div>` : ""}
 <div style="position:relative;max-width:720px">
@@ -56,7 +61,7 @@ ${cfg.hero.eyebrow ? `<p style="letter-spacing:2px;text-transform:uppercase;font
 <footer style="padding:32px 24px;border-top:1px solid #eee;margin-top:32px">
 <div style="display:flex;gap:32px;flex-wrap:wrap">${footerCols}</div>
 <div style="margin-top:16px">${socials}</div>
-${cfg.footer.show_newsletter ? `<form onsubmit="return false" style="margin-top:12px"><input placeholder="Email" style="padding:8px"><button style="padding:8px 12px">Subscribe</button></form>` : ""}
+${cfg.footer.show_newsletter ? `<div style="margin-top:12px"><p>Newsletter form preview — subscription handling stays with your website.</p><input disabled aria-label="Newsletter email preview" placeholder="Email" style="padding:8px"><button disabled style="padding:8px 12px">Subscribe</button></div>` : ""}
 <p style="margin-top:16px;font-size:12px">${escapeHtml(cfg.footer.copyright)}</p>
 </footer>
 <script>${cfg.custom.js || ""}</script>

@@ -118,9 +118,76 @@ Open:
 - `loader.js` reads its own `?site=` (or `data-cms-site`), fetches config, and
   applies header/logo/favicon/hero/footer/theme through admin-editable
   `SelectorMapping` rows (`/websites/:id/mappings`, defaults seeded per site).
-- Publish/rollback/mapping changes queue `purge_connector_cache` (post-commit).
+- Publish/rollback/mapping changes invalidate the connector cache directly after
+  commit; delivery also checks the published-version and mapping revisions. A
+  slow/unavailable Celery worker cannot leave an older configuration live.
 - Setup page at `/websites/:id/setup`: copy-paste snippet, per-mode steps,
   proxy limitations, update-flow explanation.
+
+### Connected-site publishing: local versus public
+
+The CMS can remain local for development. Publishing saves a version in its
+database; it does **not** upload HTML or change files on the connected website's
+server. The installed loader must be able to reach this CMS to fetch that version.
+
+- For fully local testing, run the target website locally too and install the
+  `http://localhost:8080/connector/v1/loader.js?site=...` tag from Setup. Publish,
+  then reload that website. Do not disable browser security to work around
+  HTTPS/local-network restrictions on an externally hosted page.
+- For public delivery later, deploy the CMS over HTTPS, set `CMS_PUBLIC_URL` to
+  its public origin (no path), and install the updated tag on the connected site.
+  `VITE_CMS_PUBLIC_URL` is a build-time fallback for older API versions. Setting
+  either variable does not create hosting, DNS, certificates, or a tunnel.
+- Configure `DJANGO_ALLOWED_HOSTS`, CSRF origins, and your TLS reverse proxy for
+  that address. Add the CMS hostname to the production Nginx `$serve_spa` map so
+  its root serves the admin SPA instead of the customer-site renderer. Do not
+  route the connected site's ERP/login traffic through a new proxy without
+  testing its authentication and form flows.
+
+Publish now uses the latest working draft, including autosaves made after a
+saved version. Rollback still selects the explicitly requested immutable snapshot.
+The default browser title follows site-name edits; a deliberately authored SEO
+title takes precedence. Header and Branding both use the same logo field.
+Uploading an image to Media Library does not select it as the logo/favicon:
+choose it in the editor and publish. Existing localhost upload URLs are delivered
+relative to the loader's CMS origin so they remain portable after deployment.
+
+The connector supports names/taglines, logo/favicon, title/meta/share-image tags,
+header layout/sticky state/CTA, hero text/background/buttons/alignment/overlay,
+navigation, footer links/copyright/social links, colors, typography, and verified
+custom code. New migrations repair untouched legacy default selectors while
+preserving custom selectors and disabled choices. Arbitrary pages still need
+matching elements; stable hooks are preferable to theme-specific classes:
+
+```html
+<strong data-cms="site-name">Brand</strong>
+<img data-cms="logo" alt="Brand">
+<nav data-cms="navigation"></nav>
+<h1 data-cms="hero-heading">Heading</h1>
+<p data-cms="hero-subheading">Description</p>
+<div data-cms="hero-buttons"></div>
+<div data-cms="footer-columns"></div>
+<div data-cms="social-links"></div>
+```
+
+Newsletter visibility controls an **existing** form (`data-cms="newsletter"`);
+subscription handling remains with the website's provider. Browser-applied SEO
+does not replace server-rendered metadata for crawlers/social-card services.
+Custom CSS/JS must also be permitted by the connected website's CSP; the loader
+preserves its installation script's nonce and does not bypass browser policies.
+
+For diagnostics, inspect `window.__CMS_CONNECTOR__` in the connected page's
+console: `state`, `version`, `applied`, `unmatched`, and `errors`. Setup links to
+the public published-config endpoint. HTTP 404 means the key/site is unknown or
+inactive; missing selectors are reported without preventing other fields from
+updating. Configuration and loader responses revalidate on each new page load.
+
+Dependency-free connector checks (Node 20+):
+
+```powershell
+node nginx/tests/proxy-headers.test.mjs
+node nginx/tests/connector-loader.test.mjs
+```
 
 ## Website builder (Phase 7)
 

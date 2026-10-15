@@ -11,6 +11,7 @@ from PIL import Image
 
 from apps.audit.models import AuditLog
 from apps.audit.services import client_ip, log_action
+from apps.sites.models import Site
 
 from .models import ConfigVersion, SiteConfig
 
@@ -103,11 +104,51 @@ def deep_merge(base: dict, patch: dict) -> dict:
     return merged
 
 
+def changed_paths(before, after, prefix="") -> list[str]:
+    """Track intentional edits, including cleared values and replaced lists."""
+    if isinstance(before, dict) and isinstance(after, dict):
+        paths = []
+        for key in sorted(set(before) | set(after)):
+            if key.startswith("_"):
+                continue
+            path = f"{prefix}.{key}" if prefix else key
+            paths.extend(changed_paths(before.get(key), after.get(key), path))
+        return paths
+    return [prefix] if before != after else []
+
+
 @transaction.atomic
 def update_draft(*, actor, site, patch: dict) -> SiteConfig:
     """Silent autosave: merges into the draft without versions or audit rows."""
     config = get_or_create_config(site)
-    config.draft = deep_merge(config.draft or {}, patch or {})
+    previous = config.draft or {}
+    draft = deep_merge(
+        previous, {k: v for k, v in patch.items() if not k.startswith("_")}
+    )
+    # Both editor locations use the same branding logo. Retain support for
+    # older API clients that submit only the legacy header.logo_url field.
+    if isinstance(patch.get("branding"), dict) and "logo_url" in patch["branding"]:
+        draft.setdefault("header", {})["logo_url"] = patch["branding"]["logo_url"]
+    elif isinstance(patch.get("header"), dict) and "logo_url" in patch["header"]:
+        draft.setdefault("branding", {})["logo_url"] = patch["header"]["logo_url"]
+    old_name = (previous.get("general") or {}).get("site_name", "")
+    new_name = (draft.get("general") or {}).get("site_name", "")
+    old_title = (previous.get("seo") or {}).get("title", "")
+    new_title = (draft.get("seo") or {}).get("title", "")
+    seeded_title = default_config(site)["seo"]["title"]
+    # Keep the default SEO title linked to the site name, but preserve an
+    # explicitly authored SEO title (including one submitted in this patch).
+    title_is_linked = old_title in ("", old_name) or (
+        old_title == seeded_title
+        and "seo.title" not in (previous.get("_overrides") or [])
+    )
+    if new_name != old_name and new_title == old_title and title_is_linked:
+        draft.setdefault("seo", {})["title"] = new_name
+    edits = set(previous.get("_overrides") or [])
+    edits.update(changed_paths(previous, draft))
+    if edits:
+        draft["_overrides"] = sorted(edits)
+    config.draft = draft
     config.updated_by = actor
     config.save(update_fields=["draft", "updated_by", "updated_at"])
     return config
@@ -119,6 +160,7 @@ def _next_version_no(site) -> int:
 
 @transaction.atomic
 def save_draft(*, actor, site, note="", request=None) -> ConfigVersion:
+    Site.objects.select_for_update().get(pk=site.pk)
     config = get_or_create_config(site)
     version = ConfigVersion.objects.create(
         site=site,
@@ -145,6 +187,7 @@ def publish(
     *, actor, site, version_id=None, action="published", request=None
 ) -> ConfigVersion:
     """Publish a version (latest draft by default). Archives the previous live one."""
+    Site.objects.select_for_update().get(pk=site.pk)
     config = get_or_create_config(site)
     if version_id is not None:
         target = site.versions.get(pk=version_id)
@@ -154,7 +197,9 @@ def publish(
             .order_by("-version_no")
             .first()
         )
-        if target is None:
+        # A saved draft may predate subsequent autosaves. Never publish that
+        # stale snapshot when the editor asks to publish its working draft.
+        if target is None or target.snapshot != config.draft:
             target = ConfigVersion.objects.create(
                 site=site,
                 version_no=_next_version_no(site),
@@ -173,10 +218,10 @@ def publish(
     config.save(
         update_fields=["published", "published_version", "updated_by", "updated_at"]
     )
-    # Invalidate the public connector cache (purge runs after commit).
-    from apps.connector.tasks import purge_connector_cache
+    # Delivery must not depend on a Celery worker processing a purge later.
+    from apps.connector.services import purge_site_cache
 
-    transaction.on_commit(lambda: purge_connector_cache.delay(site.pk))
+    transaction.on_commit(lambda: purge_site_cache(site))
     log_action(
         actor=actor,
         action=(

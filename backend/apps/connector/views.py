@@ -59,7 +59,7 @@ def loader_js(request):
     except OSError:
         return cors(JsonResponse({"detail": "Loader unavailable."}, status=500))
     resp = HttpResponse(body, content_type="application/javascript")
-    resp["Cache-Control"] = "public, max-age=3600"
+    resp["Cache-Control"] = "public, max-age=0, must-revalidate"
     return cors(resp)
 
 
@@ -170,9 +170,7 @@ class SelectorMappingViewSet(GenericViewSet):
     def purged(self, site, data, code=200):
         from django.db import transaction
 
-        from .tasks import purge_connector_cache
-
-        transaction.on_commit(lambda: purge_connector_cache.delay(site.pk))
+        transaction.on_commit(lambda: services.purge_site_cache(site))
         return Response(data, status=code)
 
     def list(self, request, site_pk=None):

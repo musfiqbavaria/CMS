@@ -46,4 +46,17 @@ describe("editor preview utils", () => {
     expect(html).toContain("Home");
     expect(html).toContain("#111111");
   });
+
+  it("uses the shared branding logo and favicon instead of a stale legacy header logo", () => {
+    const html = configToHtml({ ...base, header: { ...base.header, logo_url: "/old-logo.png" }, branding: { logo_url: "/media/new-logo.png", favicon_url: "/media/icon.png" } });
+    expect(html).toContain('src="/media/new-logo.png"');
+    expect(html).toContain('rel="icon" href="/media/icon.png"');
+    expect(html).not.toContain("/old-logo.png");
+  });
+
+  it("does not resurrect a legacy logo when the shared logo is cleared", () => {
+    const html = configToHtml({ ...base, header: { ...base.header, logo_url: "/old-logo.png" } });
+    expect(html).not.toContain("/old-logo.png");
+    expect(html).toContain("<strong>Acme</strong>");
+  });
 });

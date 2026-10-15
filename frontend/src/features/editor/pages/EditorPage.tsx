@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Link, useParams } from "react-router-dom";
 import { usePatchDraft, usePublish, useSaveDraft, useEditorConfig } from "../api";
 import { ResetDraftButton, UnsavedGuard, VersionsPanel } from "../components/VersionControls";
@@ -10,10 +10,11 @@ import { BrandingTab, CoverTab, FooterTab, GeneralTab, HeaderTab, SeoTab } from 
 import { CustomTab, HeroTab, NavTab, SocialTab, ThemeTab } from "../tabsB";
 import { Badge, Card, PageHeader } from "../../../shared/ui/kit";
 import { AdvancedTab } from "./AdvancedTab";
+import { cmsOrigin, isLocalCmsOrigin } from "../../connector/snippet";
 
-function TabBody({ tab, control, siteId }: { tab: EditorTabKey; control: Parameters<typeof GeneralTab>[0]["control"]; siteId: number }) {
+function TabBody({ tab, control, siteId, seededTitle }: { tab: EditorTabKey; control: Parameters<typeof GeneralTab>[0]["control"]; siteId: number; seededTitle?: string }) {
   switch (tab) {
-    case "general": return <GeneralTab control={control} />;
+    case "general": return <GeneralTab control={control} seededTitle={seededTitle} />;
     case "header": return <HeaderTab control={control} siteId={siteId} />;
     case "footer": return <FooterTab control={control} />;
     case "branding": return <BrandingTab control={control} siteId={siteId} />;
@@ -39,14 +40,21 @@ export default function EditorPage() {
   const [view, setView] = useState<"editor" | "preview" | "split">("split");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [operation, setOperation] = useState<"save" | "publish" | null>(null);
   const [banner, setBanner] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   const form = useForm<SiteConfigDraft>();
   const loadedFor = useRef<number | null>(null);
+  const activeSite = useRef(siteId);
+  activeSite.current = siteId;
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const pendingWrite = useRef<Promise<unknown>>(Promise.resolve());
+  const operationRef = useRef(false);
   const patchDraft = usePatchDraft(siteId);
   const saveDraft = useSaveDraft(siteId);
   const publish = usePublish(siteId);
-  const busy = saveDraft.isPending || publish.isPending;
+  const busy = operation !== null || saveDraft.isPending || publish.isPending;
+  const localOnly = isLocalCmsOrigin(cmsOrigin(site?.connector_origin));
 
   useEffect(() => {
     if (config && loadedFor.current !== config.id) {
@@ -55,19 +63,34 @@ export default function EditorPage() {
     }
   }, [config, form]);
 
-  const values = form.watch();
+  const values = useWatch({ control: form.control });
   const { isDirty: formDirty } = form.formState;
   const dirty = formDirty && !!config && isDirty(config.draft, values as SiteConfigDraft);
 
-  // Silent autosave 2s after the last change.
+  function writeDraft(snapshot: Partial<SiteConfigDraft>) {
+    // Serialize draft writes so an older autosave cannot overtake Publish.
+    const request = pendingWrite.current.catch(() => undefined).then(() => {
+      if (activeSite.current !== siteId) throw new Error("The editor website changed.");
+      return patchDraft.mutateAsync(snapshot);
+    });
+    pendingWrite.current = request;
+    return request;
+  }
+
+  // Silent autosave 2s after the last change; manual actions drain this queue.
   useEffect(() => {
-    if (!config || loadedFor.current !== config.id || !formDirty) return;
-    const t = setTimeout(() => {
+    if (!config || loadedFor.current !== config.id || !formDirty || operationRef.current) return;
+    autosaveTimer.current = setTimeout(() => {
+      if (operationRef.current) return;
       setSaving(true);
-      patchDraft.mutate(values as Partial<SiteConfigDraft>, { onSettled: () => setSaving(false) });
+      const snapshot = JSON.parse(JSON.stringify(values)) as Partial<SiteConfigDraft>;
+      const request = writeDraft(snapshot);
+      void request.catch(() => { if (activeSite.current === siteId) setBanner({ kind: "err", text: "Autosave failed. Your edits are still in this form; try Save draft." }); }).finally(() => {
+        if (pendingWrite.current === request) setSaving(false);
+      });
     }, 2000);
-    return () => clearTimeout(t);
-  }, [values, config?.id]);
+    return () => clearTimeout(autosaveTimer.current);
+  }, [values, config?.id, formDirty]);
 
   // Browser-level unsaved guard.
   useEffect(() => {
@@ -85,40 +108,51 @@ export default function EditorPage() {
   );
 
   async function flush(): Promise<void> {
-    await patchDraft.mutateAsync(form.getValues() as Partial<SiteConfigDraft>);
-    const r = await refetch();
-    if (r.data) form.reset(r.data.draft, { keepDirty: false });
+    clearTimeout(autosaveTimer.current);
+    const snapshot = JSON.parse(JSON.stringify(form.getValues())) as Partial<SiteConfigDraft>;
+    const updated = await writeDraft(snapshot);
+    if (activeSite.current !== siteId) throw new Error("The editor website changed.");
+    setSaving(false);
+    form.reset(updated.draft, { keepDirty: false });
   }
 
   async function onSaveDraft() {
+    if (operationRef.current) return;
+    operationRef.current = true;
+    setOperation("save");
     setBanner(null);
     try {
       await flush();
       const v = await saveDraft.mutateAsync(note);
+      if (activeSite.current !== siteId) return;
       setNote("");
       setBanner({ kind: "ok", text: `Draft saved as v${v.version_no}.` });
     } catch {
-      setBanner({ kind: "err", text: "Saving failed. Try again." });
-    }
+      if (activeSite.current === siteId) setBanner({ kind: "err", text: "Saving failed. Try again." });
+    } finally { operationRef.current = false; setOperation(null); setSaving(false); }
   }
 
   async function onPublish() {
+    if (operationRef.current) return;
     if (!window.confirm("Publish the current draft to the live site?")) return;
+    operationRef.current = true;
+    setOperation("publish");
     setBanner(null);
     try {
       await flush();
       const v = await publish.mutateAsync(undefined);
       const r = await refetch();
+      if (activeSite.current !== siteId) return;
       if (r.data) form.reset(r.data.draft, { keepDirty: false });
-      setBanner({ kind: "ok", text: `Published v${v.version_no}.` });
+      setBanner({ kind: "ok", text: `Published v${v.version_no}. Reload the connected website to fetch this version.${localOnly ? " Your CMS is local, so public visitors cannot receive it yet." : ""}` });
     } catch {
-      setBanner({ kind: "err", text: "Publish failed. Try again." });
-    }
+      if (activeSite.current === siteId) setBanner({ kind: "err", text: "Publish failed. Try again." });
+    } finally { operationRef.current = false; setOperation(null); setSaving(false); }
   }
 
   async function reload() {
     const r = await refetch();
-    if (r.data) {
+    if (r.data && activeSite.current === siteId) {
       loadedFor.current = r.data.id;
       form.reset(r.data.draft, { keepDirty: false });
     }
@@ -138,8 +172,10 @@ export default function EditorPage() {
     <div className="space-y-3">
       <div>
         <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <PageHeader title={site?.name ?? "Site editor"} eyebrow="Make it your own" description={`Edit the details that make ${site?.domain ?? "your website"} feel like you. Publish when you're ready to share.`} actions={<Badge tone={saving || dirty ? "amber" : "green"}>{saving ? "Autosaving..." : dirty ? "Unsaved changes" : "All changes saved"}</Badge>} />
+        <PageHeader title={site?.name ?? "Site editor"} eyebrow="Make it your own" description={`Edit the details that make ${site?.domain ?? "your website"} feel like you. Publish when you're ready to share.`} actions={<Badge tone={saving || dirty ? "amber" : "green"}>{saving ? "Autosaving..." : dirty ? "Draft changes" : "Draft saved"}</Badge>} />
       </div>
+
+      {localOnly && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Local testing mode. Publish saves changes in this CMS; it does not upload files to {site?.domain}. Public visitors need a publicly reachable HTTPS CMS. <Link to={`/websites/${siteId}/setup`} className="font-semibold underline">Check connector setup</Link>.</p>}
 
       {banner && (
         <p role={banner.kind === "ok" ? "status" : "alert"} className={`rounded p-2 text-sm ${banner.kind === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
@@ -155,7 +191,7 @@ export default function EditorPage() {
         <button onClick={onPublish} disabled={busy} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-900">
           {publish.isPending ? "Publishing…" : "Publish"}
         </button>
-        <ResetDraftButton siteId={siteId} onDone={() => void reload()} />
+        <fieldset disabled={busy || saving} className="contents"><ResetDraftButton siteId={siteId} onDone={() => void reload()} /></fieldset>
         <span className="ml-auto inline-flex rounded border text-sm dark:border-slate-600">
           {(["editor", "preview", "split"] as const).map((v) => (
             <button key={v} aria-pressed={view === v} onClick={() => setView(v)} className={`px-2 py-1 capitalize ${view === v ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}>
@@ -180,16 +216,19 @@ export default function EditorPage() {
                 </button>
               ))}
             </div>
-            <Card>
-              <TabBody tab={tab} control={form.control} siteId={siteId} />
-            </Card>
-            <VersionsPanel siteId={siteId} onRestored={() => void reload()} />
+            <fieldset disabled={busy} className="contents">
+              <Card>
+                <TabBody tab={tab} control={form.control} siteId={siteId} seededTitle={String(site?.discovery?.title || site?.name || "")} />
+              </Card>
+              <fieldset disabled={saving} className="contents"><VersionsPanel siteId={siteId} onRestored={() => void reload()} /></fieldset>
+            </fieldset>
           </div>
         )}
         {view !== "editor" && (
           <Card className="xl:sticky xl:top-4 xl:max-h-[calc(100vh-8rem)] xl:overflow-hidden">
-            <p className="mb-2 text-sm font-semibold text-slate-500">Live preview</p>
-            <iframe title="Live preview" srcDoc={previewHtml} sandbox="allow-scripts" className="h-[70vh] w-full rounded border bg-white dark:border-slate-600" />
+            <p className="mb-2 text-sm font-semibold text-slate-500">Draft preview</p>
+            <p className="mb-3 text-xs leading-5 text-[var(--muted)]">This template illustrates your settings. Your connected website keeps its own HTML and uses the configured selector mappings.</p>
+            <iframe title="Draft preview" srcDoc={previewHtml} sandbox="allow-scripts" className="h-[70vh] w-full rounded border bg-white dark:border-slate-600" />
           </Card>
         )}
       </div>

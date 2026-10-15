@@ -31,6 +31,7 @@ export interface Site {
   domains: SiteDomain[];
   homepage: number | null;
   site_key: string;
+  connector_origin?: string;
   type: SiteType;
   status: SiteStatus;
   integration_mode: IntegrationMode;

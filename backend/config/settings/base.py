@@ -159,6 +159,9 @@ LOGIN_MAX_ATTEMPTS = int(os.environ.get("LOGIN_MAX_ATTEMPTS", "5"))
 LOGIN_LOCKOUT_MINUTES = int(os.environ.get("LOGIN_LOCKOUT_MINUTES", "15"))
 TOTP_ISSUER = os.environ.get("TOTP_ISSUER", "CMS Platform")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8080")
+# Optional public HTTPS origin for snippets when the admin is opened locally.
+# Leave blank for local development; this does not create hosting or a tunnel.
+CMS_PUBLIC_URL = os.environ.get("CMS_PUBLIC_URL", "").strip().rstrip("/")
 
 # --- Auth: default user model stays Django's until Phase 1 introduces custom User ---
 AUTH_PASSWORD_VALIDATORS = [

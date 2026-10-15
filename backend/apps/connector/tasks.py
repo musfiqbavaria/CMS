@@ -1,4 +1,4 @@
-"""Connector cache purge. Queued on publish/rollback/mapping changes."""
+"""Optional maintenance purge; normal publishes invalidate directly at commit."""
 
 from celery import shared_task
 

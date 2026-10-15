@@ -2,6 +2,27 @@
 
 Living file: completed phases, key decisions, next steps.
 
+## Connected-site publish fixes (source implemented; runtime update pending)
+
+- Publish uses the current working draft, not a stale saved version. Version
+  allocation is serialized per site; rollback remains an explicit snapshot.
+- Cache invalidation runs directly after commit, with revision validation and
+  cache-failure fallback. Delivery no longer waits for a Celery purge task.
+- Added site-name/tagline mappings, metadata/title/favicon support, portable
+  upload URLs, layout/navigation/hero/footer/social/typography handling, and
+  per-field diagnostic output. Default selector migration preserves custom
+  mappings and disabled choices. Deleting a mapping remains effective.
+- Editor draft writes are queued before manual save/publish; site changes guard
+  against stale responses. Shared logo controls and local-only setup/publish
+  warnings clarify what is saved versus delivered publicly.
+- Added `CMS_PUBLIC_URL` (optional; blank while local) and documented deployment,
+  DOM hooks, newsletter-provider and crawler/CSP boundaries.
+- Verified locally: 20 Django regression tests against an isolated in-memory
+  database, 13 loader logic tests with a DOM double, 2 proxy config tests, and
+  migration/model consistency. Full frontend/browser/container verification
+  and rebuilding running services remain pending because command approval was
+  blocked by the approval service's usage limit. No public deployment was made.
+
 ## Completed
 
 ### Phase 10 - Hosted-site addressing foundation (done)

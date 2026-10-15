@@ -94,13 +94,12 @@ def test_publish_purges_cache(admin_client, site):
     primed = client.get(config_url(site))
     assert primed.status_code == 200
     assert cache.get(cache_key(site.site_key)) is not None
-    with patch("apps.connector.tasks.purge_connector_cache.delay") as delayed:
-        with TestCase.captureOnCommitCallbacks(execute=True):
-            assert (
-                client.post(f"/api/v1/sites/{site.pk}/config/publish/", {}).status_code
-                == 200
-            )
-        delayed.assert_called_with(site.pk)
+    with TestCase.captureOnCommitCallbacks(execute=True):
+        assert (
+            client.post(f"/api/v1/sites/{site.pk}/config/publish/", {}).status_code
+            == 200
+        )
+    assert cache.get(cache_key(site.site_key)) is None
 
 
 def test_rollback_reflects_immediately(client, site):

@@ -52,6 +52,10 @@ jobs:
           node-version: "20"
       - name: Install
         run: cd frontend && npm ci
+      - name: Connector loader and proxy configuration tests
+        run: |
+          node nginx/tests/proxy-headers.test.mjs
+          node nginx/tests/connector-loader.test.mjs
       - name: Lint
         run: cd frontend && npm run lint
       - name: Test

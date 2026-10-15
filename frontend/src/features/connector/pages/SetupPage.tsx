@@ -1,34 +1,17 @@
-import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useSite } from "../../sites/api";
 import { useMappings } from "../api";
 import { VerificationBadge } from "../../sites/components/StatusBadge";
-import { Card, CardTitle, Skeleton, PageHeader } from "../../../shared/ui/kit";
-import { cmsOrigin, connectorSnippet, proxyDemoUrl } from "../snippet";
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => {
-        void navigator.clipboard.writeText(text).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        });
-      }}
-      className="rounded border px-2 py-1 text-xs dark:border-slate-600"
-    >
-      {copied ? "Copied!" : "Copy"}
-    </button>
-  );
-}
+import { Card, CardTitle, CopyButton, Skeleton, PageHeader } from "../../../shared/ui/kit";
+import { cmsOrigin, connectorSnippet, isLocalCmsOrigin, proxyDemoUrl } from "../snippet";
 
 export default function SetupPage() {
   const { id } = useParams();
   const siteId = Number(id);
   const { data: site, isLoading } = useSite(Number.isFinite(siteId) ? siteId : null);
   const { data: mappings } = useMappings(Number.isFinite(siteId) ? siteId : null);
-  const origin = cmsOrigin();
+  const origin = cmsOrigin(site?.connector_origin);
+  const localOnly = isLocalCmsOrigin(origin);
 
   if (isLoading) return <Skeleton className="h-48" />;
   if (!site) {
@@ -56,6 +39,8 @@ export default function SetupPage() {
         </div>
       </div>
 
+      {localOnly ? <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"><p className="font-semibold">Local testing only — this CMS is not publicly hosted</p><p className="mt-1">The connector currently uses <code>{origin}</code>. That address points to each visitor's own computer, not your CMS. Publish works locally, but does not upload anything to {site.domain}. For public delivery, deploy the CMS over HTTPS and set <code>CMS_PUBLIC_URL</code> to that origin before installing the updated script.</p><p className="mt-2">For tests on this computer, keep the CMS running and check the website's browser console for local-network access restrictions.</p></div> : !origin.startsWith("https:") && <p role="alert" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900">This CMS address is not HTTPS. An HTTPS website may block the connector. Configure a public HTTPS CMS origin before production use.</p>}
+
       {site.verification_status !== "verified" && (
         <p role="alert" className="rounded bg-amber-50 p-3 text-sm text-amber-800">
           Verify ownership first — the connector serves full config (including custom code) only to
@@ -71,14 +56,15 @@ export default function SetupPage() {
             <li>Publish the site from the <Link to={`/websites/${site.id}/edit`} className="underline">editor</Link> — changes apply on next page load.</li>
             <li>Fine-tune which element each value overrides on the <Link to={`/websites/${site.id}/mappings`} className="underline">mappings page</Link> ({mappings?.length ?? "…"} active).</li>
           </ol>
-          <div className="mt-3 flex items-start gap-2">
-            <pre className="flex-1 overflow-x-auto rounded bg-slate-100 p-2 font-mono text-xs dark:bg-slate-700">{snippet}</pre>
+          <div className="mt-3 flex flex-wrap items-start gap-2">
+            <pre className="min-w-0 flex-1 overflow-x-auto rounded bg-slate-100 p-2 font-mono text-xs dark:bg-slate-700">{snippet}</pre>
             <CopyButton text={snippet} />
           </div>
           <p className="mt-2 text-xs text-slate-500">
             The loader reads its own <code>?site=</code> parameter, fetches the published config with ETag
             revalidation, and overrides header, logo, favicon, hero, footer and theme colors in place.
           </p>
+          <p className="mt-3 text-xs text-slate-500">Check the <a href={`${origin}/connector/v1/config/${encodeURIComponent(site.site_key)}/`} target="_blank" rel="noreferrer" className="underline">published configuration</a> to confirm the saved values. Uploading an image is separate from choosing it in Logo &amp; Favicon.</p>
         </Card>
       )}
 
@@ -102,6 +88,12 @@ export default function SetupPage() {
           </div>
         </Card>
       )}
+
+      <Card>
+        <CardTitle>Check what the connector applied</CardTitle>
+        <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Open your connected website's browser console and inspect <code>window.__CMS_CONNECTOR__</code>. It reports the published version, applied fields, missing selectors, and errors. A missing selector means the website needs a matching element or a corrected mapping.</p>
+        <p className="mt-3 text-xs leading-6 text-[var(--muted)]">Complex sections use stable hooks such as <code>data-cms="navigation"</code>, <code>data-cms="footer-columns"</code>, and <code>data-cms="newsletter"</code>. Newsletter settings toggle an existing form; the connector does not provide a subscription service. Metadata is applied in the browser; crawler/share previews may require server-side integration.</p>
+      </Card>
 
       <Card>
         <CardTitle>How updates flow</CardTitle>

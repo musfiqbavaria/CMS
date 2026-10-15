@@ -14,20 +14,23 @@ export default function MappingsPage() {
   const update = useUpdateMapping(siteId);
   const remove = useDeleteMapping(siteId);
   const reset = useResetMappings(siteId);
-  const [key, setKey] = useState("site_logo");
+  const [key, setKey] = useState("site_name");
   const [selector, setSelector] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const usedKeys = new Set((mappings ?? []).map((m) => m.key));
+  const availableKeys = ["site_name", "site_tagline", "site_logo", "header_settings", "header_cta", "navigation", "hero_eyebrow", "hero_heading", "hero_subheading", "hero_background", "hero_button", "hero_buttons", "footer_copyright", "footer_columns", "footer_newsletter", "social_links", "favicon", "cover_image", "theme_colors"].filter((item) => !usedKeys.has(item));
+  const activeKey = availableKeys.includes(key) ? key : availableKeys[0] ?? "";
 
   function add() {
     setError(null);
+    if (!activeKey) { setError("All supported fields already have mappings. Edit an existing mapping instead."); return; }
     if (!selector.trim()) {
       setError("Selector is required.");
       return;
     }
     create.mutate(
-      { key, selector: selector.trim() },
+      { key: activeKey, selector: selector.trim() },
       { onSuccess: () => setSelector(""), onError: () => setError("Could not add mapping (duplicate key?).") },
     );
   }
@@ -58,15 +61,13 @@ export default function MappingsPage() {
       <Card>
         <CardTitle>Add mapping</CardTitle>
         <div className="mt-2 flex flex-wrap gap-2">
-          <select value={key} onChange={(e) => setKey(e.target.value)} className="rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700">
-            {["site_logo", "header_cta", "hero_eyebrow", "hero_heading", "hero_subheading", "hero_background", "hero_button", "footer_copyright", "favicon", "cover_image", "theme_colors"]
-              .filter((k) => !usedKeys.has(k))
-              .map((k) => (
+          <select aria-label="Mapping field" value={activeKey} disabled={!availableKeys.length} onChange={(e) => setKey(e.target.value)} className="rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700">
+            {availableKeys.map((k) => (
                 <option key={k} value={k}>{k}</option>
               ))}
           </select>
           <input value={selector} onChange={(e) => setSelector(e.target.value)} placeholder='CSS selector, e.g. header img or [data-cms="logo"]' className="min-w-64 flex-1 rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700" />
-          <button onClick={add} disabled={create.isPending} className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50">
+          <button onClick={add} disabled={create.isPending || !activeKey} className="rounded bg-slate-900 px-3 py-2 text-sm text-white disabled:opacity-50">
             Add
           </button>
           <button onClick={() => reset.mutate()} disabled={reset.isPending} className="rounded border px-3 py-2 text-sm dark:border-slate-600">

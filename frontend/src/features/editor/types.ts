@@ -13,6 +13,7 @@ export interface FooterColumn {
 }
 
 export interface SiteConfigDraft {
+  _overrides?: string[];
   general: { site_name: string; tagline: string };
   header: { logo_url: string; layout: string; sticky: boolean; cta_text: string; cta_url: string };
   footer: { columns: FooterColumn[]; copyright: string; show_newsletter: boolean };

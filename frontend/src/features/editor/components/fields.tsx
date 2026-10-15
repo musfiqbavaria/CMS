@@ -3,7 +3,7 @@ import { Controller, useFieldArray } from "react-hook-form";
 import { useState } from "react";
 import MediaPicker from "./MediaPicker";
 
-export function Text<T extends FieldValues>({ label, name, control, placeholder }: { label: string; name: Path<T>; control: Control<T>; placeholder?: string }) {
+export function Text<T extends FieldValues>({ label, name, control, placeholder, onValueChange }: { label: string; name: Path<T>; control: Control<T>; placeholder?: string; onValueChange?: (value: string, previous: unknown) => void }) {
   return (
     <label className="block text-sm">
       <span className="font-medium">{label}</span>
@@ -11,7 +11,7 @@ export function Text<T extends FieldValues>({ label, name, control, placeholder 
         name={name}
         control={control}
         render={({ field }) => (
-          <input {...field} value={field.value ?? ""} placeholder={placeholder} className="mt-1 w-full rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
+          <input {...field} value={field.value ?? ""} onChange={(event) => { onValueChange?.(event.target.value, field.value); field.onChange(event); }} placeholder={placeholder} className="mt-1 w-full rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
         )}
       />
     </label>

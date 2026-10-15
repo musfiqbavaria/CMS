@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
@@ -51,6 +52,7 @@ class SiteSerializer(serializers.ModelSerializer):
     is_managed = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     domains = SiteDomainSerializer(many=True, read_only=True)
+    connector_origin = serializers.SerializerMethodField()
 
     class Meta:
         model = Site
@@ -64,6 +66,7 @@ class SiteSerializer(serializers.ModelSerializer):
             "domains",
             "homepage",
             "site_key",
+            "connector_origin",
             "type",
             "status",
             "integration_mode",
@@ -111,6 +114,13 @@ class SiteSerializer(serializers.ModelSerializer):
 
     def get_is_managed(self, obj) -> bool:
         return hosting.is_managed_hostname(obj.domain)
+
+    def get_connector_origin(self, obj) -> str:
+        configured = getattr(settings, "CMS_PUBLIC_URL", "")
+        if configured:
+            return configured
+        request = self.context.get("request")
+        return request.build_absolute_uri("/").rstrip("/") if request else ""
 
     def get_public_url(self, obj) -> str:
         return hosting.canonical_url(obj)
