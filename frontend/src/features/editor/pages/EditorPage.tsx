@@ -181,7 +181,14 @@ export default function EditorPage() {
 
   const SectionIcon = SECTION_DETAILS[tab].icon;
   const nextSection = sectionOrder[sectionOrder.indexOf(tab) + 1];
-  const liveUrl = site ? site.public_url || publicSiteUrl(site.domain) : null;
+  // Verified connected sites render through the CMS preview proxy (same
+  // origin, framing blockers removed); everything else loads directly.
+  const liveUrl =
+    site?.type === "connected" && site?.verification_status === "verified"
+      ? `/connector/v1/preview/${site.site_key}/`
+      : site
+        ? site.public_url || publicSiteUrl(site.domain)
+        : null;
 
   return (
     <div className="site-editor space-y-4">

@@ -1,5 +1,6 @@
 """Public connector endpoints (no auth) + admin mapping CRUD."""
 
+import re
 from pathlib import Path
 
 from django.http import HttpResponse, JsonResponse
@@ -16,6 +17,15 @@ from . import services
 from .models import SelectorMapping
 
 LOADER_JS = Path(__file__).resolve().parent / "static" / "connector" / "loader.js"
+
+# Framing blockers some origins send (Django's XFrameOptionsMiddleware emits
+# X-Frame-Options: DENY by default). Removed for editor previews only.
+FRAME_BLOCK_META_RE = re.compile(
+    r'<meta\s+[^>]*http-equiv\s*=\s*["\']?\s*'
+    r"(content-security-policy|x-frame-options)"
+    r'\s*["\']?[^>]*>',
+    re.IGNORECASE,
+)
 
 
 def cors(response):
@@ -130,6 +140,71 @@ def proxy_page(request, site_key: str):
     )
     resp = HttpResponse(html, content_type="text/html")
     resp["Cache-Control"] = "public, max-age=0, must-revalidate"
+    return cors(resp)
+
+
+@csrf_exempt
+@require_GET
+def preview_page(request, site_key: str):
+    """Editor preview of a verified connected site, served through the CMS.
+
+    Same-origin HTML with a <base> fix and framing blockers removed, so
+    origins sending X-Frame-Options / CSP frame-ancestors still render
+    inside the editor. Unlike proxy_page there is no loader injection:
+    this is the pure original site. Gated by verification + the unguessable
+    site_key, like the other connector endpoints.
+    """
+    site = Site.objects.filter(site_key=site_key).first()
+    if site is None:
+        return cors(HttpResponse("Not found.", status=404, content_type="text/plain"))
+    if site.type != Site.Types.CONNECTED:
+        return cors(
+            HttpResponse(
+                "Preview is for connected sites.",
+                status=400,
+                content_type="text/plain",
+            )
+        )
+    if site.verification_status != Site.VerificationStatuses.VERIFIED:
+        return cors(
+            HttpResponse(
+                "Site ownership is not verified.", status=403, content_type="text/plain"
+            )
+        )
+    path = request.GET.get("path", "/")
+    if not path.startswith("/") or "://" in path:
+        return cors(
+            HttpResponse("Invalid path.", status=400, content_type="text/plain")
+        )
+    try:
+        result = safe_fetch(f"https://{site.domain}{path}")
+    except UnsafeURLError as exc:
+        return cors(
+            HttpResponse(
+                f"Upstream refused: {exc}", status=502, content_type="text/plain"
+            )
+        )
+    except Exception as exc:
+        return cors(
+            HttpResponse(
+                f"Upstream failed: {exc}", status=502, content_type="text/plain"
+            )
+        )
+    html = result.text
+    if "<head" not in html.lower():
+        return cors(
+            HttpResponse(
+                "Upstream did not return HTML.", status=502, content_type="text/plain"
+            )
+        )
+    html = FRAME_BLOCK_META_RE.sub("", html)
+    lower = html.lower()
+    head_idx = lower.find("<head")
+    head_end = html.find(">", head_idx) + 1
+    base_tag = f'<base href="https://{site.domain}/">'
+    html = html[:head_end] + base_tag + html[head_end:]
+    resp = HttpResponse(html, content_type="text/html")
+    resp["Cache-Control"] = "no-store"
     return cors(resp)
 
 

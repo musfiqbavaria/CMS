@@ -132,7 +132,7 @@ export function EditorPreview({ html, liveUrl, onEdit }: { html: string; liveUrl
       </div>
       <div className="site-editor-preview-footer">
         {showingLive ? (
-          <p>This is your original website, live. Draft edits appear here after you publish{liveUrl && !liveUrl.startsWith("https") ? " (local preview over plain HTTP)" : ""}. If the frame stays blank, the site blocks embedding — use Open website instead.</p>
+          <p>This is your original website, served through the CMS preview proxy so framing blockers don’t apply. Draft edits appear here after you publish.</p>
         ) : (
           <p>This template illustrates your settings, not your website’s exact layout. The connected website keeps its own HTML and selector mappings.</p>
         )}

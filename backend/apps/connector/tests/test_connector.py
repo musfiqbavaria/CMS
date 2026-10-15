@@ -151,6 +151,43 @@ def test_proxy_gating_and_injection(client, site):
     assert '<base href="https://shop.example.com/">' in body
 
 
+def test_preview_renders_verified_site_without_framing_blockers(client, site):
+    url = f"/connector/v1/preview/{site.site_key}/"
+    assert client.get(url).status_code == 403  # unverified
+    site.verification_status = Site.VerificationStatuses.VERIFIED
+    site.save()
+
+    class FakeResult:
+        text = (
+            '<html><head><meta http-equiv="X-Frame-Options" content="DENY">'
+            '<meta http-equiv="Content-Security-Policy" content="frame-ancestors \'none\'">'
+            "<title>T</title></head>"
+            '<body><img src="/logo.png"><h1>Hi</h1></body></html>'
+        )
+
+    with patch("apps.connector.views.safe_fetch", return_value=FakeResult()):
+        resp = client.get(url)
+    assert resp.status_code == 200
+    body = resp.content.decode()
+    assert "X-Frame-Options" not in body
+    assert "frame-ancestors" not in body
+    assert '<base href="https://shop.example.com/">' in body
+    assert "loader.js" not in body  # pure original, no injection
+    assert resp["Cache-Control"] == "no-store"
+
+
+def test_preview_rejects_unknown_built_and_bad_path(client, site):
+    assert client.get("/connector/v1/preview/nope/").status_code == 404
+    site.verification_status = Site.VerificationStatuses.VERIFIED
+    site.type = Site.Types.BUILT
+    site.save()
+    assert client.get(f"/connector/v1/preview/{site.site_key}/").status_code == 400
+    site.type = Site.Types.CONNECTED
+    site.save()
+    resp = client.get(f"/connector/v1/preview/{site.site_key}/?path=https://evil.test/")
+    assert resp.status_code == 400
+
+
 def test_mapping_crud(admin_client, site):
     base = f"/api/v1/sites/{site.pk}/mappings/"
     # Prime the default mapping set through the public config endpoint.
