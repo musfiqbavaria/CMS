@@ -77,12 +77,14 @@ const DEVICES = [
   { key: "mobile", label: "Mobile", icon: Smartphone, width: 390, height: 844 },
 ] as const;
 
-export function EditorPreview({ html, onEdit }: { html: string; onEdit: () => void }) {
+export function EditorPreview({ html, liveUrl, onEdit }: { html: string; liveUrl: string | null; onEdit: () => void }) {
   const [device, setDevice] = useState<(typeof DEVICES)[number]["key"]>("desktop");
+  const [source, setSource] = useState<"draft" | "live">("draft");
   const [availableWidth, setAvailableWidth] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
   const selected = DEVICES.find((item) => item.key === device)!;
   const scale = availableWidth > 0 ? Math.min(1, availableWidth / selected.width) : 1;
+  const showingLive = source === "live" && liveUrl !== null;
 
   useEffect(() => {
     const element = viewport.current;
@@ -101,23 +103,39 @@ export function EditorPreview({ html, onEdit }: { html: string; onEdit: () => vo
   return (
     <Card className="site-editor-preview">
       <div className="site-editor-preview-heading">
-        <div><p className="ui-eyebrow">Your canvas</p><h2 className="ui-card-title">Draft preview</h2></div>
-        <div role="group" aria-label="Preview device" className="site-editor-segmented">
-          {DEVICES.map(({ key, label, icon: Icon }) => (
-            <button type="button" key={key} aria-label={`${label} preview`} title={label} aria-pressed={device === key} onClick={() => setDevice(key)}><Icon size={16} aria-hidden="true" /></button>
-          ))}
+        <div><p className="ui-eyebrow">Your canvas</p><h2 className="ui-card-title">{showingLive ? "Live website" : "Draft preview"}</h2></div>
+        <div className="flex flex-wrap items-center gap-2">
+          {liveUrl && (
+            <div role="group" aria-label="Preview source" className="site-editor-segmented">
+              <button type="button" aria-pressed={!showingLive} onClick={() => setSource("draft")}>Draft design</button>
+              <button type="button" aria-pressed={showingLive} onClick={() => setSource("live")}>Live website</button>
+            </div>
+          )}
+          <div role="group" aria-label="Preview device" className="site-editor-segmented">
+            {DEVICES.map(({ key, label, icon: Icon }) => (
+              <button type="button" key={key} aria-label={`${label} preview`} title={label} aria-pressed={device === key} onClick={() => setDevice(key)}><Icon size={16} aria-hidden="true" /></button>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="site-editor-browser-bar"><span aria-hidden="true" className="site-editor-browser-dots"><i /><i /><i /></span><span>Template canvas</span><span className="ml-auto">{selected.width} px</span></div>
+      <div className="site-editor-browser-bar"><span aria-hidden="true" className="site-editor-browser-dots"><i /><i /><i /></span><span>{showingLive ? liveUrl : "Template canvas"}</span><span className="ml-auto">{selected.width} px</span></div>
       <div className="site-editor-preview-stage">
         <div ref={viewport} className="site-editor-preview-viewport">
           <div className="site-editor-preview-frame" style={{ width: selected.width * scale, height: selected.height * scale }}>
-            <iframe title="Draft preview" srcDoc={html} sandbox="allow-scripts" style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+            {showingLive ? (
+              <iframe title="Live website preview" src={liveUrl} sandbox="allow-scripts allow-same-origin" style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+            ) : (
+              <iframe title="Draft preview" srcDoc={html} sandbox="allow-scripts" style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+            )}
           </div>
         </div>
       </div>
       <div className="site-editor-preview-footer">
-        <p>This template illustrates your settings, not your website’s exact layout. The connected website keeps its own HTML and selector mappings.</p>
+        {showingLive ? (
+          <p>This is your original website, live. Draft edits appear here after you publish{liveUrl && !liveUrl.startsWith("https") ? " (local preview over plain HTTP)" : ""}. If the frame stays blank, the site blocks embedding — use Open website instead.</p>
+        ) : (
+          <p>This template illustrates your settings, not your website’s exact layout. The connected website keeps its own HTML and selector mappings.</p>
+        )}
         <button type="button" onClick={onEdit}>Back to editing <ArrowRight size={13} aria-hidden="true" /></button>
       </div>
     </Card>

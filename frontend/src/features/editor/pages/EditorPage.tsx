@@ -260,7 +260,7 @@ export default function EditorPage() {
             </div>
           </div>
         )}
-        {view !== "editor" && <EditorPreview html={previewHtml} onEdit={() => setView("editor")} />}
+        {view !== "editor" && <EditorPreview html={previewHtml} liveUrl={liveUrl} onEdit={() => setView("editor")} />}
       </div>
 
       <UnsavedGuard when={dirty} />
