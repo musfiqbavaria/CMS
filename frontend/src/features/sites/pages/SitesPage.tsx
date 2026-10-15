@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ExternalLink, Globe, History, Pencil, Power, ShieldCheck, Trash2, Wrench } from "lucide-react";
 import {
   useBulkSites,
   useCreateSite,
@@ -11,6 +12,7 @@ import type { Site, SiteListParams } from "../types";
 import type { SiteSchemaValues } from "../schemas";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import HistoryModal from "../components/HistoryModal";
+import RowMenu from "../components/RowMenu";
 import SiteFormModal from "../components/SiteFormModal";
 import { StatusBadge, TypeBadge, VerificationBadge } from "../components/StatusBadge";
 import { useBuilderStore } from "../../../stores/builder";
@@ -302,25 +304,34 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
                     <td className="py-2 pr-4"><VerificationBadge status={site.verification_status} /></td>
                     <td className="py-2 pr-4 whitespace-nowrap">{new Date(site.created_at).toLocaleDateString()}</td>
                     <td className="py-2 text-right">
-                      <div className="inline-flex flex-wrap justify-end gap-1">
-                        <Link to={`/websites/${site.id}/edit`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Edit</Link>
-                        <a href={publicSiteUrl(site.public_url || site.domain)} target="_blank" rel="noopener noreferrer" className="rounded border px-2 py-1 text-xs dark:border-slate-600">
-  Open
-</a>
-                        <Link to={`/websites/${site.id}/setup`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Setup</Link>
-                        {site.type === "built" && (
-                          <Link to={`/websites/${site.id}/domains`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Domains</Link>
-                        )}
-                        {site.type === "connected" && (
-                          <Link to={`/websites/${site.id}/verify`} className="rounded border px-2 py-1 text-xs dark:border-slate-600">
-                            Verify
-                          </Link>
-                        )}
-                        <button onClick={() => toggleStatus(site)} className="rounded border px-2 py-1 text-xs dark:border-slate-600">
-                          {site.status === "active" ? "Deactivate" : "Activate"}
-                        </button>
-                        <button onClick={() => setHistorySite(site)} className="rounded border px-2 py-1 text-xs dark:border-slate-600">History</button>
-                        <button onClick={() => setDeleting(site)} className="rounded border border-red-300 px-2 py-1 text-xs text-red-600">Delete</button>
+                      <div className="inline-flex items-center justify-end gap-1.5">
+                        <a
+                          href={publicSiteUrl(site.public_url || site.domain)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Open ${site.domain}`}
+                          aria-label={`Open ${site.domain}`}
+                          className="rounded-lg border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+                        >
+                          <ExternalLink size={16} />
+                        </a>
+                        <RowMenu
+                          label={`Actions for ${site.domain}`}
+                          items={[
+                            { label: "Edit", icon: <Pencil size={16} className="text-slate-400" />, to: `/websites/${site.id}/edit` },
+                            { label: "Setup", icon: <Wrench size={16} className="text-slate-400" />, to: `/websites/${site.id}/setup` },
+                            ...(site.type === "built"
+                              ? [{ label: "Domains", icon: <Globe size={16} className="text-slate-400" />, to: `/websites/${site.id}/domains` }]
+                              : [{ label: "Verify", icon: <ShieldCheck size={16} className="text-slate-400" />, to: `/websites/${site.id}/verify` }]),
+                            {
+                              label: site.status === "active" ? "Deactivate" : "Activate",
+                              icon: <Power size={16} className="text-slate-400" />,
+                              onClick: () => toggleStatus(site),
+                            },
+                            { label: "History", icon: <History size={16} className="text-slate-400" />, onClick: () => setHistorySite(site) },
+                            { label: "Delete", icon: <Trash2 size={16} />, danger: true, dividerBefore: true, onClick: () => setDeleting(site) },
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>
