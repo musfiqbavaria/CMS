@@ -1,16 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, CircleAlert, Globe2, LayoutPanelLeft, Loader2, Monitor, PanelLeft, Plug, Rocket, Save, X } from "lucide-react";
 import { usePatchDraft, usePublish, useSaveDraft, useEditorConfig } from "../api";
 import { ResetDraftButton, UnsavedGuard, VersionsPanel } from "../components/VersionControls";
 import { configToHtml, isDirty } from "../preview";
-import { EDITOR_TABS, type EditorTabKey, type SiteConfigDraft } from "../types";
+import type { EditorTabKey, SiteConfigDraft } from "../types";
 import { useSite } from "../../sites/api";
+import { publicSiteUrl } from "../../sites/links";
 import { BrandingTab, CoverTab, FooterTab, GeneralTab, HeaderTab, SeoTab } from "../tabsA";
 import { CustomTab, HeroTab, NavTab, SocialTab, ThemeTab } from "../tabsB";
-import { Badge, Card, PageHeader } from "../../../shared/ui/kit";
+import { Badge, Button, Card, PageHeader, Spinner } from "../../../shared/ui/kit";
+import { EditorPreview, EditorSections, SECTION_DETAILS, SECTION_GROUPS, sectionLabel } from "../components/EditorWorkspace";
 import { AdvancedTab } from "./AdvancedTab";
 import { cmsOrigin, isLocalCmsOrigin } from "../../connector/snippet";
+import "../editor.css";
+
+const sectionOrder = SECTION_GROUPS.flatMap((group) => group.sections);
+const editorViews = [
+  { key: "editor", label: "Editor", icon: PanelLeft },
+  { key: "split", label: "Split", icon: LayoutPanelLeft },
+  { key: "preview", label: "Preview", icon: Monitor },
+] as const;
 
 function TabBody({ tab, control, siteId, seededTitle }: { tab: EditorTabKey; control: Parameters<typeof GeneralTab>[0]["control"]; siteId: number; seededTitle?: string }) {
   switch (tab) {
@@ -158,7 +169,7 @@ export default function EditorPage() {
     }
   }
 
-  if (isLoading) return <p className="text-sm text-slate-500">Loading editor…</p>;
+  if (isLoading) return <Spinner label="Loading your editor…" />;
   if (isError || !config || validId === null) {
     return (
       <Card>
@@ -168,69 +179,88 @@ export default function EditorPage() {
     );
   }
 
+  const SectionIcon = SECTION_DETAILS[tab].icon;
+  const nextSection = sectionOrder[sectionOrder.indexOf(tab) + 1];
+  const liveUrl = site ? site.public_url || publicSiteUrl(site.domain) : null;
+
   return (
-    <div className="space-y-3">
+    <div className="site-editor space-y-4">
       <div>
-        <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <PageHeader title={site?.name ?? "Site editor"} eyebrow="Make it your own" description={`Edit the details that make ${site?.domain ?? "your website"} feel like you. Publish when you're ready to share.`} actions={<Badge tone={saving || dirty ? "amber" : "green"}>{saving ? "Autosaving..." : dirty ? "Draft changes" : "Draft saved"}</Badge>} />
+        <Link to="/websites" className="site-editor-back"><ArrowLeft size={13} aria-hidden="true" /> All websites</Link>
+        <PageHeader title="Website editor" eyebrow="Create with confidence" description="Your content, your style. Bring it all together, one section at a time." actions={<Badge tone="blue">Connected website</Badge>} />
       </div>
 
-      {localOnly && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-6 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Local testing mode. Publish saves changes in this CMS; it does not upload files to {site?.domain}. Public visitors need a publicly reachable HTTPS CMS. <Link to={`/websites/${siteId}/setup`} className="font-semibold underline">Check connector setup</Link>.</p>}
+      <Card className="site-editor-context">
+        <span className="ui-icon-well"><Globe2 size={21} aria-hidden="true" /></span>
+        <div className="site-editor-context-name"><h2>{site?.name ?? "Your website"}</h2><p>{site?.domain ?? "Connected website"}</p></div>
+        <Badge tone={config.published_version_no != null ? "green" : "slate"}>{config.published_version_no != null ? `Published v${config.published_version_no}` : "Not published yet"}</Badge>
+        <div className="site-editor-context-links">
+          <Link to={`/websites/${siteId}/setup`} className="ui-button" data-variant="secondary"><Plug size={14} aria-hidden="true" /> Connection</Link>
+          {liveUrl && <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="ui-button" data-variant="secondary">Open website <ArrowUpRight size={14} aria-hidden="true" /></a>}
+        </div>
+      </Card>
+
+      {localOnly && <div role="status" className="site-editor-notice" data-tone="local"><CircleAlert size={16} aria-hidden="true" /><p><strong>Local testing mode.</strong> Publish saves changes in this CMS; it does not upload files to {site?.domain ?? "your website"}. Public visitors need a publicly reachable HTTPS CMS. <Link to={`/websites/${siteId}/setup`} className="font-semibold underline">Check connector setup</Link>.</p></div>}
 
       {banner && (
-        <p role={banner.kind === "ok" ? "status" : "alert"} className={`rounded p-2 text-sm ${banner.kind === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-          {banner.text} <button onClick={() => setBanner(null)} className="underline">Dismiss</button>
-        </p>
+        <div role={banner.kind === "ok" ? "status" : "alert"} className="site-editor-notice" data-tone={banner.kind}>
+          {banner.kind === "ok" ? <CheckCircle2 size={16} aria-hidden="true" /> : <CircleAlert size={16} aria-hidden="true" />}
+          <p>{banner.text}</p><button type="button" aria-label="Dismiss message" onClick={() => setBanner(null)}><X size={16} aria-hidden="true" /></button>
+        </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
-        <input aria-label="Version note (optional)" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Version note (optional)" className="w-52 rounded border p-1.5 text-sm dark:border-slate-600 dark:bg-slate-700" />
-        <button onClick={onSaveDraft} disabled={busy} className="rounded border px-3 py-1.5 text-sm disabled:opacity-50 dark:border-slate-600">
-          {saveDraft.isPending ? "Saving…" : "Save draft"}
-        </button>
-        <button onClick={onPublish} disabled={busy} className="rounded bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-slate-900">
-          {publish.isPending ? "Publishing…" : "Publish"}
-        </button>
-        <fieldset disabled={busy || saving} className="contents"><ResetDraftButton siteId={siteId} onDone={() => void reload()} /></fieldset>
-        <span className="ml-auto inline-flex rounded border text-sm dark:border-slate-600">
-          {(["editor", "preview", "split"] as const).map((v) => (
-            <button key={v} aria-pressed={view === v} onClick={() => setView(v)} className={`px-2 py-1 capitalize ${view === v ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}>
-              {v}
-            </button>
-          ))}
-        </span>
+      <div className="site-editor-toolbar">
+        <div className="site-editor-status" role="status">
+          {saving ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
+          <span>{saving ? "Autosaving your draft…" : dirty ? "Draft changes · autosave on" : "Draft saved · autosave on"}</span>
+        </div>
+        <div className="site-editor-toolbar-actions">
+          <div role="group" aria-label="Workspace view" className="site-editor-segmented">
+            {editorViews.map(({ key, label, icon: Icon }) => <button type="button" key={key} aria-pressed={view === key} onClick={() => setView(key)}><Icon size={14} aria-hidden="true" />{label}</button>)}
+          </div>
+          <Button onClick={onSaveDraft} disabled={busy}><Save size={14} aria-hidden="true" />{operation === "save" ? "Saving…" : "Save draft"}</Button>
+          <Button variant="primary" onClick={onPublish} disabled={busy}><Rocket size={14} aria-hidden="true" />{operation === "publish" ? "Publishing…" : "Publish changes"}</Button>
+        </div>
       </div>
 
-      <div className={`grid gap-4 ${view === "split" ? "xl:grid-cols-2" : ""}`}>
+      <div className="site-editor-layout" data-view={view}>
         {view !== "preview" && (
-          <div className="min-w-0 space-y-3">
-            <div aria-label="Editor sections" className="flex gap-1 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2">
-              {EDITOR_TABS.map((t) => (
-                <button
-                  key={t.key}
-                  aria-pressed={tab === t.key}
-                  onClick={() => setTab(t.key)}
-                  className={`whitespace-nowrap rounded px-2.5 py-1.5 text-sm ${tab === t.key ? "bg-slate-900 font-medium text-white dark:bg-white dark:text-slate-900" : "border dark:border-slate-600"}`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <fieldset disabled={busy} className="contents">
+          <div className="site-editor-settings">
+            <EditorSections active={tab} onSelect={setTab} />
+            <div className="site-editor-form-column space-y-4">
+              <section id="editor-section-content" aria-labelledby="editor-section-heading">
+                <Card>
+                  <div className="site-editor-form-heading">
+                    <span className="ui-icon-well"><SectionIcon size={19} aria-hidden="true" /></span>
+                    <div><h2 id="editor-section-heading" className="ui-card-title">{sectionLabel(tab)}</h2><p>{SECTION_DETAILS[tab].description}</p></div>
+                  </div>
+                  <fieldset disabled={busy} className="site-editor-fields">
+                    <legend className="sr-only">{sectionLabel(tab)} settings</legend>
+                    <TabBody tab={tab} control={form.control} siteId={siteId} seededTitle={String(site?.discovery?.title || site?.name || "")} />
+                  </fieldset>
+                  <div className="site-editor-form-footer">
+                    <p>Changes stay in your draft until you publish.</p>
+                    {nextSection && <Button onClick={() => setTab(nextSection)}>Next: {sectionLabel(nextSection)} <ArrowRight size={13} aria-hidden="true" /></Button>}
+                  </div>
+                </Card>
+              </section>
               <Card>
-                <TabBody tab={tab} control={form.control} siteId={siteId} seededTitle={String(site?.discovery?.title || site?.name || "")} />
+                <h2 className="ui-card-title">Save a checkpoint</h2>
+                <p className="mt-1 text-xs leading-6 text-[var(--muted)]">Keep a named version you can return to later.</p>
+                <div className="site-editor-checkpoint mt-4">
+                  <label>Version note <span className="font-normal">(optional)</span><input disabled={busy} value={note} onChange={(event) => setNote(event.target.value)} placeholder="e.g. Updated homepage imagery" /></label>
+                  <Button onClick={onSaveDraft} disabled={busy}><Save size={14} aria-hidden="true" />{operation === "save" ? "Saving…" : "Save version"}</Button>
+                </div>
               </Card>
-              <fieldset disabled={saving} className="contents"><VersionsPanel siteId={siteId} onRestored={() => void reload()} /></fieldset>
-            </fieldset>
+              <fieldset disabled={busy || saving} className="contents"><VersionsPanel siteId={siteId} onRestored={() => void reload()} /></fieldset>
+              <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+                <p className="text-xs text-[var(--muted)]">Want to start from the published settings?</p>
+                <fieldset disabled={busy || saving} className="contents"><ResetDraftButton siteId={siteId} onDone={() => void reload()} /></fieldset>
+              </div>
+            </div>
           </div>
         )}
-        {view !== "editor" && (
-          <Card className="xl:sticky xl:top-4 xl:max-h-[calc(100vh-8rem)] xl:overflow-hidden">
-            <p className="mb-2 text-sm font-semibold text-slate-500">Draft preview</p>
-            <p className="mb-3 text-xs leading-5 text-[var(--muted)]">This template illustrates your settings. Your connected website keeps its own HTML and uses the configured selector mappings.</p>
-            <iframe title="Draft preview" srcDoc={previewHtml} sandbox="allow-scripts" className="h-[70vh] w-full rounded border bg-white dark:border-slate-600" />
-          </Card>
-        )}
+        {view !== "editor" && <EditorPreview html={previewHtml} onEdit={() => setView("editor")} />}
       </div>
 
       <UnsavedGuard when={dirty} />

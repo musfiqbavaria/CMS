@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useBlocker } from "react-router-dom";
+import { History, RotateCcw } from "lucide-react";
+import { Badge, Button, Card, Spinner } from "../../../shared/ui/kit";
 import { usePublish, useResetDraft, useRollback, useVersions } from "../api";
 
 export function VersionsPanel({ siteId, onRestored }: { siteId: number; onRestored: () => void }) {
@@ -20,57 +22,61 @@ export function VersionsPanel({ siteId, onRestored }: { siteId: number; onRestor
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Version history</h2>
+    <Card>
+      <h2 className="ui-card-title flex items-center gap-2"><History size={16} className="text-[var(--accent)]" aria-hidden="true" /> Version history</h2>
+      <p className="mt-1 text-xs leading-6 text-[var(--muted)]">Your saved drafts and previously published versions.</p>
       {msg && <p role="status" className="mt-2 text-sm text-slate-600 dark:text-slate-300">{msg}</p>}
-      {isLoading && <p className="mt-2 text-sm text-slate-500">Loading…</p>}
-      {data && data.results.length === 0 && <p className="mt-2 text-sm text-slate-500">No saved versions yet.</p>}
-      <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto">
+      {isLoading && <div className="mt-4"><Spinner label="Loading versions…" /></div>}
+      {data && data.results.length === 0 && <p className="mt-4 rounded-xl border border-dashed border-[var(--line)] p-4 text-xs leading-6 text-[var(--muted)]">No saved versions yet. Save your first checkpoint above to start your history.</p>}
+      <ul className="site-editor-history-list">
         {data?.results.map((v) => (
-          <li key={v.id} className="flex items-center gap-2 rounded border p-2 text-sm dark:border-slate-700">
-            <span className="font-medium">v{v.version_no}</span>
-            <span className="rounded bg-slate-100 px-1.5 text-xs capitalize dark:bg-slate-700">{v.status}</span>
-            <span className="truncate text-xs text-slate-500">{v.note || new Date(v.created_at).toLocaleString()}</span>
-            <span className="ml-auto flex gap-1">
+          <li key={v.id}>
+            <span className="text-xs font-semibold">v{v.version_no}</span>
+            <Badge tone={v.status === "published" ? "green" : "slate"}>{v.status}</Badge>
+            <span className="min-w-0 flex-1 basis-24 break-words text-xs text-[var(--muted)]">{v.note || new Date(v.created_at).toLocaleString()}</span>
+            <span className="ml-auto flex flex-wrap gap-1">
               {v.status !== "published" && (
-                <button
+                <Button
                   onClick={() => act(publish.mutateAsync(v.id), `Published v${v.version_no}.`)}
-                  className="rounded border px-1.5 py-0.5 text-xs dark:border-slate-600"
+                  disabled={publish.isPending || rollback.isPending}
+                  className="!min-h-8 !px-2 !text-[10px]"
                 >
                   Publish
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 onClick={() => {
                   if (window.confirm(`Roll back the live site to v${v.version_no}?`)) {
                     act(rollback.mutateAsync(v.id), `Rolled back to v${v.version_no}.`);
                   }
                 }}
-                className="rounded border px-1.5 py-0.5 text-xs dark:border-slate-600"
+                disabled={publish.isPending || rollback.isPending}
+                className="!min-h-8 !px-2 !text-[10px]"
               >
                 Rollback
-              </button>
+              </Button>
             </span>
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   );
 }
 
 export function ResetDraftButton({ siteId, onDone }: { siteId: number; onDone: () => void }) {
   const reset = useResetDraft(siteId);
   return (
-    <button
+    <Button
       onClick={() => {
         if (window.confirm("Discard unsaved draft changes and restore the published version?")) {
           reset.mutate(undefined, { onSuccess: onDone });
         }
       }}
-      className="rounded border px-3 py-1.5 text-sm dark:border-slate-600"
+      disabled={reset.isPending}
+      variant="ghost"
     >
-      Reset draft to published
-    </button>
+      <RotateCcw size={13} aria-hidden="true" />{reset.isPending ? "Resetting…" : "Reset draft to published"}
+    </Button>
   );
 }
 

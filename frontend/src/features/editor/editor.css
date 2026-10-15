@@ -1,0 +1,94 @@
+.site-editor { min-width: 0; }
+.site-editor-back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px; color: var(--muted); font-size: 12px; }
+.site-editor-back:hover { color: var(--accent); }
+.site-editor-context { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.site-editor-context-name { min-width: 0; flex: 1 1 200px; }
+.site-editor-context-name h2 { font-size: 14px; font-weight: 650; overflow-wrap: anywhere; }
+.site-editor-context-name p { margin-top: 5px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.site-editor-context-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.site-editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; background: var(--surface); }
+.site-editor-status { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
+.site-editor-status > svg { color: var(--accent); flex-shrink: 0; }
+.site-editor-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.site-editor-segmented { display: inline-flex; gap: 3px; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: var(--surface-soft); }
+.site-editor-segmented button { display: inline-flex; min-width: 34px; min-height: 32px; align-items: center; justify-content: center; gap: 6px; border-radius: 7px; padding: 6px 9px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.site-editor-segmented button:hover { color: var(--ink); }
+.site-editor-segmented button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 4px rgb(15 23 42 / 10%); }
+.site-editor-notice { display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 12px; line-height: 1.7; }
+.site-editor-notice > svg { margin-top: 3px; flex-shrink: 0; }
+.site-editor-notice > p { flex: 1; }
+.site-editor-notice > button { display: inline-flex; padding: 3px; }
+.site-editor-notice[data-tone="local"] { border-color: #fde1a5; background: #fffbef; color: #8a5118; }
+.site-editor-notice[data-tone="ok"] { border-color: #a7e6c8; background: #effbf5; color: #14613f; }
+.site-editor-notice[data-tone="err"] { border-color: #fecdd3; background: #fff1f2; color: #9f1239; }
+.dark .site-editor-notice[data-tone="local"] { border-color: #644922; background: #302719; color: #f6d29a; }
+.dark .site-editor-notice[data-tone="ok"] { border-color: #275c49; background: #142e26; color: #9ce5c4; }
+.dark .site-editor-notice[data-tone="err"] { border-color: #633045; background: #351c2c; color: #fda4af; }
+.site-editor-layout, .site-editor-settings { display: grid; min-width: 0; align-items: start; gap: 20px; }
+.site-editor-nav.ui-card { padding: 16px 12px; }
+.site-editor-nav-heading { padding: 4px 8px 16px; }
+.site-editor-section-picker select { width: 100%; }
+.site-editor-section-list { display: none; }
+.site-editor-nav-group + .site-editor-nav-group { margin-top: 20px; }
+.site-editor-nav-group > p { margin: 0 8px 8px; color: var(--muted); font-size: 9px; font-weight: 650; letter-spacing: 0.11em; text-transform: uppercase; }
+.site-editor-nav-group button { display: flex; width: 100%; min-height: 40px; align-items: center; gap: 9px; border: 1px solid transparent; border-radius: 9px; padding: 9px 8px; color: var(--muted); text-align: left; font-size: 11px; line-height: 1.5; }
+.site-editor-nav-group button > svg { flex-shrink: 0; }
+.site-editor-nav-group button:hover { background: var(--surface-soft); color: var(--ink); }
+.site-editor-nav-group button[aria-pressed="true"] { border-color: var(--accent-soft); background: var(--accent-soft); color: var(--accent); font-weight: 650; }
+.site-editor-nav-hint { display: none; align-items: flex-start; gap: 8px; margin: 20px 8px 4px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 10px; line-height: 1.8; }
+.site-editor-nav-hint svg { margin-top: 3px; flex-shrink: 0; color: var(--accent); }
+.site-editor-form-column { min-width: 0; }
+.site-editor-form-heading { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 20px; }
+.site-editor-form-heading p { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.site-editor-fields { min-width: 0; padding: 22px 0; }
+.site-editor-fields > div { min-width: 0; }
+.site-editor-fields :where(input, textarea, select) { max-width: 100%; }
+.site-editor-form-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); padding-top: 18px; }
+.site-editor-form-footer p { max-width: 250px; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.site-editor-checkpoint { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.site-editor-checkpoint label { flex: 1 1 180px; color: var(--muted); font-size: 11px; }
+.site-editor-checkpoint input { display: block; width: 100%; margin-top: 8px; }
+.site-editor-preview.ui-card { overflow: hidden; padding: 0; }
+.site-editor-preview-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; }
+.site-editor-preview-heading .ui-eyebrow { margin-bottom: 3px; font-size: 9px; }
+.site-editor-browser-bar { display: flex; min-width: 0; align-items: center; gap: 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 16px; background: var(--surface-soft); color: var(--muted); font-size: 10px; }
+.site-editor-browser-dots { display: flex; gap: 4px; }
+.site-editor-browser-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.site-editor-preview-stage { max-height: 720px; overflow: auto; padding: 16px; background-color: var(--canvas); background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 14px 14px; }
+.site-editor-preview-viewport { width: 100%; }
+.site-editor-preview-frame { position: relative; margin: 0 auto; overflow: hidden; border-radius: 7px; background: #fff; box-shadow: 0 4px 18px rgb(15 23 42 / 10%); }
+.site-editor-preview-frame iframe { display: block; max-width: none; border: 0; background: #fff; transform-origin: top left; color-scheme: light; }
+.site-editor-preview-footer { border-top: 1px solid var(--line); padding: 16px 20px; }
+.site-editor-preview-footer p { color: var(--muted); font-size: 11px; line-height: 1.8; }
+.site-editor-preview-footer button { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--accent); font-size: 11px; font-weight: 600; }
+.site-editor-history-list { display: grid; max-height: 320px; gap: 10px; margin-top: 18px; overflow-y: auto; }
+.site-editor-history-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+
+@media (min-width: 768px) {
+  .site-editor-settings { grid-template-columns: 208px minmax(0, 1fr); }
+  .site-editor-section-picker { display: none; }
+  .site-editor-section-list, .site-editor-nav-hint { display: block; }
+  .site-editor-nav-hint { display: flex; }
+  .site-editor-nav { position: sticky; top: 16px; max-height: calc(100dvh - 48px); overflow-y: auto; }
+}
+@media (min-width: 1440px) {
+  .site-editor-layout[data-view="split"] { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  .site-editor-layout[data-view="split"] .site-editor-settings { grid-template-columns: 180px minmax(0, 1fr); gap: 16px; }
+  .site-editor-preview { position: sticky; top: 16px; }
+}
+@media (max-width: 639px) {
+  .site-editor-context { gap: 12px; }
+  .site-editor-context-links { width: 100%; }
+  .site-editor-context-links > a { flex: 1; }
+  .site-editor-toolbar { align-items: flex-start; padding: 14px; }
+  .site-editor-toolbar-actions { width: 100%; }
+  .site-editor-toolbar-actions > .ui-button { flex: 1; }
+  .site-editor-segmented { justify-content: center; }
+  .site-editor-toolbar-actions > .site-editor-segmented { width: 100%; }
+  .site-editor-toolbar-actions > .site-editor-segmented button { flex: 1; }
+  .site-editor-form-heading { align-items: flex-start; }
+  .site-editor-form-heading .ui-icon-well { width: 36px; height: 36px; border-radius: 10px; }
+  .site-editor-form-footer { flex-wrap: wrap; }
+  .site-editor-preview-heading { padding: 16px; }
+  .site-editor-preview-stage { padding: 10px; }
+}
