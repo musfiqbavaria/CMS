@@ -4,7 +4,7 @@ import { useSite } from "../api";
 import { useAddDomain, useCheckDomain, useDeleteDomain, useMakePrimary, useSiteDomains } from "../domains";
 import type { SiteDomain } from "../types";
 import { publicSiteUrl } from "../links";
-import { Card, CardTitle, CopyButton, Skeleton } from "../../../shared/ui/kit";
+import { Card, CardTitle, CopyButton, Skeleton, PageHeader } from "../../../shared/ui/kit";
 
 function serverMessage(err: unknown): string {
   const data = (err as { response?: { data?: unknown } }).response?.data;
@@ -82,7 +82,7 @@ export default function DomainsPage() {
     <div className="space-y-4">
       <div>
         <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <h1 className="mt-1 text-2xl font-bold">Domains{site ? ` · ${site.name}` : ""}</h1>
+        <PageHeader title={site ? `Domains · ${site.name}` : "Domains"} eyebrow="Your address online" />
         <p className="mt-1 text-sm text-slate-500">
           Every address below serves this site from our platform. Custom domains go live after DNS verification.
         </p>

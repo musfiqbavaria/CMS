@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../shared/api/client";
-import { Card, Skeleton } from "../../shared/ui/kit";
+import { Card, Skeleton, PageHeader } from "../../shared/ui/kit";
 import type { Paged } from "../sites/types";
 
 interface AuditEntry {
@@ -52,7 +52,7 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Audit Logs</h1>
+      <PageHeader title="Audit Logs" description="A clear record of changes, publishing, and activity across your workspace." eyebrow="System" />
       <Card>
         <div className="flex flex-wrap gap-2">
           <select value={site} onChange={(e) => { setSite(e.target.value); resetPage(); }} className="rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700">

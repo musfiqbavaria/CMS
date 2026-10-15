@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useSite } from "../../sites/api";
 import { useMappings } from "../api";
 import { VerificationBadge } from "../../sites/components/StatusBadge";
-import { Card, CardTitle, Skeleton } from "../../../shared/ui/kit";
+import { Card, CardTitle, Skeleton, PageHeader } from "../../../shared/ui/kit";
 import { cmsOrigin, connectorSnippet, proxyDemoUrl } from "../snippet";
 
 function CopyButton({ text }: { text: string }) {
@@ -47,7 +47,7 @@ export default function SetupPage() {
     <div className="space-y-4">
       <div>
         <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <h1 className="mt-1 text-2xl font-bold">Setup — {site.domain}</h1>
+        <PageHeader title="Bring your website together" eyebrow="Integration setup" description={site.domain} />
         <div className="mt-2 flex gap-2">
           <VerificationBadge status={site.verification_status} />
           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium dark:bg-slate-700">

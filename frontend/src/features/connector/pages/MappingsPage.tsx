@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCreateMapping, useDeleteMapping, useMappings, useResetMappings, useUpdateMapping } from "../api";
 import { useSite } from "../../sites/api";
-import { Card, CardTitle, Skeleton } from "../../../shared/ui/kit";
+import { Card, CardTitle, Skeleton, PageHeader } from "../../../shared/ui/kit";
 
 export default function MappingsPage() {
   const { id } = useParams();
@@ -46,7 +46,7 @@ export default function MappingsPage() {
     <div className="space-y-4">
       <div>
         <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <h1 className="mt-1 text-2xl font-bold">Selector mappings — {site.domain}</h1>
+        <PageHeader title="Content connections" eyebrow="Selector mappings" description={site.domain} />
         <p className="mt-1 text-sm text-slate-500">
           Each row maps one published value onto the visitor’s page. Prefer stable hooks like{" "}
           <code>[data-cms="hero-heading"]</code> over fragile theme classes.

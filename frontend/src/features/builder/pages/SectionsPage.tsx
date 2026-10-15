@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PageHeader } from "../../../shared/ui/kit";
 import { useAllSections } from "../api";
 import { useBuilderStore } from "../../../stores/builder";
 import SitePicker from "../components/SitePicker";
@@ -9,7 +10,7 @@ export default function SectionsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Sections</h1>
+      <PageHeader title="Sections" description="Manage the building blocks that make every page yours." eyebrow="Content" />
       <SitePicker hint="Sections are edited inside their page" />
       {!siteId ? (
         <p className="text-sm text-slate-500">Select a site first.</p>

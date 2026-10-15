@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "../../../shared/ui/kit";
 import { useCreateMenu, useMenuItemMutations, useMenuItems, useMenus } from "../api";
 import { useBuilderStore } from "../../../stores/builder";
 import SitePicker from "../components/SitePicker";
@@ -14,7 +15,7 @@ export default function MenusPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Menus</h1>
+      <PageHeader title="Menus" description="Help visitors find their way with clear, thoughtful navigation." eyebrow="Build" />
       <SitePicker />
       {!siteId ? (
         <p className="text-sm text-slate-500">Select a site first.</p>

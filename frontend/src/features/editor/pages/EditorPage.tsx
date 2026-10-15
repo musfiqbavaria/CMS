@@ -8,7 +8,7 @@ import { EDITOR_TABS, type EditorTabKey, type SiteConfigDraft } from "../types";
 import { useSite } from "../../sites/api";
 import { BrandingTab, CoverTab, FooterTab, GeneralTab, HeaderTab, SeoTab } from "../tabsA";
 import { CustomTab, HeroTab, NavTab, SocialTab, ThemeTab } from "../tabsB";
-import { Card } from "../../../shared/ui/kit";
+import { Badge, Card, PageHeader } from "../../../shared/ui/kit";
 import { AdvancedTab } from "./AdvancedTab";
 
 function TabBody({ tab, control, siteId }: { tab: EditorTabKey; control: Parameters<typeof GeneralTab>[0]["control"]; siteId: number }) {
@@ -138,12 +138,7 @@ export default function EditorPage() {
     <div className="space-y-3">
       <div>
         <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold">Edit {site?.domain ?? ""}</h1>
-          <span className="text-xs text-slate-500">
-            {saving ? "Autosaving…" : dirty ? "Unsaved changes" : "All changes saved"}
-          </span>
-        </div>
+        <PageHeader title={site?.name ?? "Site editor"} eyebrow="Make it your own" description={`Edit the details that make ${site?.domain ?? "your website"} feel like you. Publish when you're ready to share.`} actions={<Badge tone={saving || dirty ? "amber" : "green"}>{saving ? "Autosaving..." : dirty ? "Unsaved changes" : "All changes saved"}</Badge>} />
       </div>
 
       {banner && (
@@ -152,8 +147,8 @@ export default function EditorPage() {
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Version note (optional)" className="w-52 rounded border p-1.5 text-sm dark:border-slate-600 dark:bg-slate-700" />
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
+        <input aria-label="Version note (optional)" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Version note (optional)" className="w-52 rounded border p-1.5 text-sm dark:border-slate-600 dark:bg-slate-700" />
         <button onClick={onSaveDraft} disabled={busy} className="rounded border px-3 py-1.5 text-sm disabled:opacity-50 dark:border-slate-600">
           {saveDraft.isPending ? "Saving…" : "Save draft"}
         </button>
@@ -163,7 +158,7 @@ export default function EditorPage() {
         <ResetDraftButton siteId={siteId} onDone={() => void reload()} />
         <span className="ml-auto inline-flex rounded border text-sm dark:border-slate-600">
           {(["editor", "preview", "split"] as const).map((v) => (
-            <button key={v} onClick={() => setView(v)} className={`px-2 py-1 capitalize ${view === v ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}>
+            <button key={v} aria-pressed={view === v} onClick={() => setView(v)} className={`px-2 py-1 capitalize ${view === v ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900" : ""}`}>
               {v}
             </button>
           ))}
@@ -172,11 +167,12 @@ export default function EditorPage() {
 
       <div className={`grid gap-4 ${view === "split" ? "xl:grid-cols-2" : ""}`}>
         {view !== "preview" && (
-          <div className="space-y-3">
-            <div className="flex gap-1 overflow-x-auto">
+          <div className="min-w-0 space-y-3">
+            <div aria-label="Editor sections" className="flex gap-1 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2">
               {EDITOR_TABS.map((t) => (
                 <button
                   key={t.key}
+                  aria-pressed={tab === t.key}
                   onClick={() => setTab(t.key)}
                   className={`whitespace-nowrap rounded px-2.5 py-1.5 text-sm ${tab === t.key ? "bg-slate-900 font-medium text-white dark:bg-white dark:text-slate-900" : "border dark:border-slate-600"}`}
                 >

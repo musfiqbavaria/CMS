@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { KeyRound, Save, ShieldCheck, UserRound } from "lucide-react";
 import { changePassword, confirmTwoFactorSetup, disableTwoFactor, fetchTwoFactorSetup, updateMe } from "../auth/account";
 import { fetchMe } from "../auth/api";
 import { useAuthStore } from "../../stores/auth";
-import { Card, CardTitle } from "../../shared/ui/kit";
+import { Badge, Button, Card, CardTitle, CopyButton, PageHeader } from "../../shared/ui/kit";
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -12,6 +13,13 @@ export default function SettingsPage() {
   const [code, setCode] = useState("");
   const [disablePw, setDisablePw] = useState("");
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setMsg(null);
+    try { await action(); } finally { setBusy(false); }
+  }
 
   function say(kind: "ok" | "err", text: string) {
     setMsg({ kind, text });
@@ -63,7 +71,7 @@ export default function SettingsPage() {
     try {
       await disableTwoFactor(disablePw);
       setDisablePw("");
-      setTwoFa({ enabled: false });
+      setTwoFa(null);
       await fetchMe();
       say("ok", "Two-factor authentication disabled.");
     } catch {
@@ -73,55 +81,35 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <PageHeader title="Account settings" eyebrow="Make yourself at home" description="Your profile, password, and the extra layers that keep your workspace secure." />
       {msg && (
         <p role={msg.kind === "ok" ? "status" : "alert"} className={`rounded p-2 text-sm ${msg.kind === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
           {msg.text}
         </p>
       )}
       <Card>
-        <CardTitle>Profile</CardTitle>
-        <div className="mt-2 grid gap-2 text-sm sm:grid-cols-3">
-          <input value={profile.first_name} onChange={(e) => setProfile({ ...profile, first_name: e.target.value })} placeholder="First name" className="rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
-          <input value={profile.last_name} onChange={(e) => setProfile({ ...profile, last_name: e.target.value })} placeholder="Last name" className="rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
-          <input value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} placeholder="Email" className="rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
-        </div>
-        <button onClick={saveProfile} className="mt-2 rounded bg-slate-900 px-3 py-1.5 text-sm text-white">Save profile</button>
+        <div className="flex flex-wrap items-center gap-4"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-xl font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">{(user?.first_name || user?.username || "A").slice(0, 1).toUpperCase()}</span><div className="min-w-0 flex-1"><h2 className="font-semibold">{[user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username}</h2><p className="mt-1 break-all text-xs text-[var(--muted)]">{user?.email}</p></div><Badge tone="blue">{user?.role}</Badge></div>
       </Card>
 
       <Card>
-        <CardTitle>Change password</CardTitle>
-        <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
-          <input value={pw.old_password} onChange={(e) => setPw({ ...pw, old_password: e.target.value })} placeholder="Current password" type="password" autoComplete="current-password" className="rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
-          <input value={pw.new_password} onChange={(e) => setPw({ ...pw, new_password: e.target.value })} placeholder="New password" type="password" autoComplete="new-password" className="rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
-        </div>
-        <button onClick={savePassword} className="mt-2 rounded bg-slate-900 px-3 py-1.5 text-sm text-white">Change password</button>
-      </Card>
+        <section className="settings-section">
+          <div><span className="ui-icon-well mb-3"><UserRound size={20} aria-hidden="true" /></span><CardTitle>Personal details</CardTitle><p className="mt-2 max-w-xs text-xs leading-6 text-[var(--muted)]">A few details to make this workspace yours. Your username stays the same.</p></div>
+          <form onSubmit={(event) => { event.preventDefault(); void run(saveProfile); }} className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="text-xs font-medium" htmlFor="profile-first">First name<input id="profile-first" autoComplete="given-name" value={profile.first_name} onChange={(event) => setProfile({ ...profile, first_name: event.target.value })} placeholder="First name" className="mt-2 w-full" /></label><label className="text-xs font-medium" htmlFor="profile-last">Last name<input id="profile-last" autoComplete="family-name" value={profile.last_name} onChange={(event) => setProfile({ ...profile, last_name: event.target.value })} placeholder="Last name" className="mt-2 w-full" /></label></div><label className="block text-xs font-medium" htmlFor="profile-email">Email address<input id="profile-email" type="email" autoComplete="email" value={profile.email} onChange={(event) => setProfile({ ...profile, email: event.target.value })} placeholder="you@example.com" className="mt-2 w-full" /></label><Button type="submit" variant="primary" disabled={busy}><Save size={14} aria-hidden="true" /> Save profile</Button></form>
+        </section>
 
-      <Card>
-        <CardTitle>Two-factor authentication ({user?.is_2fa_enabled ? "on" : "off"})</CardTitle>
-        {!twoFa && (
-          <button onClick={loadTwoFa} className="mt-2 rounded border px-3 py-1.5 text-sm dark:border-slate-600">
-            {user?.is_2fa_enabled ? "Manage 2FA" : "Set up 2FA"}
-          </button>
-        )}
-        {twoFa && !twoFa.enabled && (
-          <div className="mt-2 space-y-2 text-sm">
-            <p>Scan this secret into your authenticator app, then confirm with a code:</p>
-            <p className="break-all rounded bg-slate-100 p-2 font-mono text-xs dark:bg-slate-700">{twoFa.secret}</p>
-            <p className="break-all font-mono text-[11px] text-slate-500">{twoFa.otpauth_url}</p>
-            <div className="flex gap-2">
-              <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="6-digit code" inputMode="numeric" className="rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
-              <button onClick={enableTwoFa} className="rounded bg-slate-900 px-3 py-1.5 text-white">Enable</button>
-            </div>
+        <section className="settings-section">
+          <div><span className="ui-icon-well mb-3"><KeyRound size={20} aria-hidden="true" /></span><CardTitle>Password</CardTitle><p className="mt-2 max-w-xs text-xs leading-6 text-[var(--muted)]">Use a strong, unique password you don't use on another website.</p></div>
+          <form onSubmit={(event) => { event.preventDefault(); void run(savePassword); }} className="space-y-4"><label className="block text-xs font-medium" htmlFor="current-password">Current password<input id="current-password" type="password" autoComplete="current-password" value={pw.old_password} onChange={(event) => setPw({ ...pw, old_password: event.target.value })} className="mt-2 w-full" required /></label><label className="block text-xs font-medium" htmlFor="new-password">New password<input id="new-password" type="password" autoComplete="new-password" value={pw.new_password} onChange={(event) => setPw({ ...pw, new_password: event.target.value })} className="mt-2 w-full" required /></label><Button type="submit" disabled={busy}>Update password</Button></form>
+        </section>
+
+        <section className="settings-section">
+          <div><span className="ui-icon-well mb-3"><ShieldCheck size={20} aria-hidden="true" /></span><CardTitle>Two-factor authentication</CardTitle><p className="mt-2 max-w-xs text-xs leading-6 text-[var(--muted)]">Add a second layer of security with a code from your authenticator app.</p></div>
+          <div><Badge tone={user?.is_2fa_enabled ? "green" : "amber"}>{user?.is_2fa_enabled ? "Enabled" : "Not enabled"}</Badge>
+            {!twoFa && <div className="mt-4"><Button disabled={busy} onClick={() => void run(loadTwoFa)}>{user?.is_2fa_enabled ? "Manage 2FA" : "Set up authenticator"}</Button></div>}
+            {twoFa && !twoFa.enabled && <div className="mt-4 space-y-4"><p className="text-xs leading-6 text-[var(--muted)]">Add this setup key to your authenticator app, then enter the current code to confirm.</p><div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-soft)] p-3"><code className="min-w-0 flex-1 break-all text-xs">{twoFa.secret}</code>{twoFa.secret && <CopyButton text={twoFa.secret} />}</div><details className="text-xs text-[var(--muted)]"><summary className="cursor-pointer">Show authenticator link</summary><p className="mt-2 break-all font-mono text-[10px]">{twoFa.otpauth_url}</p></details><form onSubmit={(event) => { event.preventDefault(); void run(enableTwoFa); }} className="flex flex-wrap items-end gap-2"><label className="min-w-0 text-xs font-medium" htmlFor="setup-code">Authenticator code<input id="setup-code" value={code} onChange={(event) => setCode(event.target.value)} placeholder="000000" inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="mt-2 block w-40 tracking-widest" required /></label><Button type="submit" variant="primary" disabled={busy}>Enable 2FA</Button></form></div>}
+            {twoFa?.enabled && <form onSubmit={(event) => { event.preventDefault(); void run(disable); }} className="mt-4 space-y-4"><label className="block text-xs font-medium" htmlFor="disable-password">Confirm your password<input id="disable-password" value={disablePw} onChange={(event) => setDisablePw(event.target.value)} type="password" autoComplete="current-password" className="mt-2 w-full" required /></label><Button type="submit" variant="danger" disabled={busy}>Disable 2FA</Button></form>}
           </div>
-        )}
-        {twoFa?.enabled && (
-          <div className="mt-2 flex gap-2 text-sm">
-            <input value={disablePw} onChange={(e) => setDisablePw(e.target.value)} placeholder="Password to disable" type="password" className="rounded border p-2 dark:border-slate-600 dark:bg-slate-700" />
-            <button onClick={disable} className="rounded border border-red-300 px-3 py-1.5 text-red-600">Disable 2FA</button>
-          </div>
-        )}
+        </section>
       </Card>
     </div>
   );

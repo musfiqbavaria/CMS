@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useApplyTemplate, useBuiltSites, useTemplates } from "../api";
 import { useBuilderStore } from "../../../stores/builder";
-import { Card, CardTitle } from "../../../shared/ui/kit";
+import { Badge, Button, Card, EmptyState, PageHeader, Skeleton } from "../../../shared/ui/kit";
+import { ArrowRight, Check, LayoutTemplate } from "lucide-react";
+import TemplatePreview from "../components/TemplatePreview";
 import SitePicker from "../components/SitePicker";
 import SitePublishBar from "../components/SitePublishBar";
 
@@ -39,7 +41,7 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Templates</h1>
+      <PageHeader title="A head start on something great" eyebrow="Template collection" description="Choose a starting point, add your own story, and make it unmistakably yours." />
       <p className="text-sm text-slate-500">
         Starter packs that seed pages, sections, a nav menu and the homepage. Visual
         styles live under <Link to="/builder/themes" className="underline">Themes</Link>.
@@ -76,27 +78,27 @@ export default function TemplatesPage() {
             </Card>
           )}
           {isLoading ? (
-            <p className="text-sm text-slate-500">Loading…</p>
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((item) => <Skeleton key={item} className="h-80" />)}</div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {(templates ?? []).map((t) => (
-                <Card key={t.slug}>
-                  <CardTitle>{t.pages} pages · menu included</CardTitle>
-                  <h2 className="mt-1 text-lg font-bold">{t.name}</h2>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t.description}</p>
-                  <button
+                <Card key={t.slug} className="flex flex-col gap-4">
+                  <TemplatePreview slug={t.slug} name={t.name} />
+                  <div><div className="flex items-center justify-between gap-2"><h2 className="text-base font-semibold">{t.name}</h2><Badge tone="slate">{t.pages} pages</Badge></div><p className="mt-2 text-xs leading-6 text-[var(--muted)]">{t.description}</p></div>
+                  <p className="mt-auto flex items-center gap-1.5 text-[10px] text-[var(--muted)]"><Check size={12} className="text-emerald-500" aria-hidden="true" /> Pages, navigation, and homepage included</p>
+                  <Button variant="primary"
                     onClick={() => {
                       if (window.confirm(`Apply the ${t.name} template to ${site?.name ?? "this site"}?`)) start(t.slug, false);
                     }}
                     disabled={apply.isPending}
-                    className="mt-3 rounded bg-slate-900 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-slate-900"
+                    className="w-full"
                   >
-                    {apply.isPending ? "Applying…" : `Use ${t.name}`}
-                  </button>
+                    {apply.isPending ? "Applying…" : `Use ${t.name}`} <ArrowRight size={14} aria-hidden="true" />
+                  </Button>
                 </Card>
               ))}
               {(templates ?? []).length === 0 && (
-                <p className="text-sm text-slate-500">No templates available.</p>
+                <div className="sm:col-span-2 xl:col-span-3"><EmptyState icon={LayoutTemplate} title="No templates available" hint="Templates will appear here when they're available for this site." /></div>
               )}
             </div>
           )}

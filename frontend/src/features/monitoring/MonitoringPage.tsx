@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../shared/api/client";
-import { Card, CardTitle, EmptyState, PageHeader, Skeleton, StatusDot } from "../../shared/ui/kit";
+import { Button, Card, CardTitle, EmptyState, PageHeader, Skeleton, StatusDot } from "../../shared/ui/kit";
+import { Activity, RefreshCw } from "lucide-react";
 
 interface CheckSummary {
   site: number;
@@ -51,10 +52,15 @@ export default function MonitoringPage() {
     <div className="space-y-4">
       <PageHeader
         title="Monitoring"
-        description="Uptime every 5 min · SSL + connector presence daily. Failures notify here live."
+        eyebrow="A little peace of mind"
+        description="Keep your websites running smoothly. Uptime, certificates, and connector health in one view."
+        actions={<Button disabled={summary.isFetching} onClick={() => void summary.refetch()}><RefreshCw size={14} className={summary.isFetching ? "animate-spin" : ""} aria-hidden="true" />Refresh status</Button>}
       />
+      {summary.data && <div className="grid gap-4 sm:grid-cols-3">{[{ label: "Websites monitored", value: summary.data.length, tone: "text-blue-500" }, { label: "Healthy websites", value: summary.data.filter((item) => item.overall === "ok").length, tone: "text-emerald-500" }, { label: "Need attention", value: summary.data.filter((item) => item.overall === "fail").length, tone: "text-amber-500" }].map((item) => <Card key={item.label}><div className="flex items-center gap-2"><Activity size={15} className={item.tone} aria-hidden="true" /><span className="text-xs text-[var(--muted)]">{item.label}</span></div><p className="ui-stat-value">{item.value}</p></Card>)}</div>}
       {summary.isLoading ? (
         <Skeleton className="h-48" />
+      ) : summary.isError ? (
+        <EmptyState title="Status checks couldn't load" hint="Please try refreshing the connection." action={<Button onClick={() => void summary.refetch()}>Try again</Button>} />
       ) : (
         <Card>
           <CardTitle>Site status</CardTitle>
@@ -121,12 +127,12 @@ export default function MonitoringPage() {
         ) : (
           <ul className="mt-2 space-y-1 text-sm">
             {(history.data ?? []).map((c) => (
-              <li key={c.id} className="flex gap-2">
+              <li key={c.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] p-3">
                 <StatusDot status={c.status === "ok" ? "ok" : "error"} />
                 <span className="font-medium">{CHECK_LABELS[c.check_type] ?? c.check_type}</span>
                 {c.host && <span className="font-mono text-xs text-slate-500">{c.host}</span>}
                 <span className="text-slate-500">{new Date(c.checked_at).toLocaleString()}</span>
-                <span className="truncate font-mono text-xs text-slate-500">{JSON.stringify(c.detail)}</span>
+                <details className="w-full text-[11px] text-[var(--muted)]"><summary className="cursor-pointer">Check details</summary><pre className="mt-2 overflow-x-auto p-3 text-[10px]">{JSON.stringify(c.detail, null, 2)}</pre></details>
               </li>
             ))}
             {(history.data ?? []).length === 0 && <li className="text-sm text-slate-500">No checks recorded yet.</li>}

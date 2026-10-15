@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useApplyTemplate, useBuiltSites, useCreatePage, useDeletePage, usePages, useSetHomepage, useTemplates, useUpdatePage } from "../api";
 import { useBuilderStore } from "../../../stores/builder";
-import { Card } from "../../../shared/ui/kit";
+import { Card, PageHeader } from "../../../shared/ui/kit";
 import SitePicker from "../components/SitePicker";
 import SitePublishBar from "../components/SitePublishBar";
 
@@ -14,7 +14,7 @@ export default function PagesPage() {
   const [msg, setMsg] = useState<string | null>(null);
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Pages</h1>
+      <PageHeader title="Pages" description="Create pages, shape their content, and decide what goes live." eyebrow="Content" />
       <SitePicker />
       {!siteId ? (
         <p className="text-sm text-slate-500">Select a site to manage its pages.</p>

@@ -12,7 +12,7 @@ import {
 import { SECTION_TYPES } from "../sectionTypes";
 import SectionCard, { moveItem } from "../components/SectionCard";
 import { useBuilderStore } from "../../../stores/builder";
-import { Card } from "../../../shared/ui/kit";
+import { Card, PageHeader } from "../../../shared/ui/kit";
 import type { Section } from "../types";
 
 export default function PageEditorPage() {
@@ -63,7 +63,7 @@ export default function PageEditorPage() {
       <div>
         <Link to="/builder/pages" className="text-sm text-slate-500 underline">← Pages</Link>
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-bold">{page.title}</h1>
+          <PageHeader title={page.title} eyebrow="Page editor" />
           <span className="font-mono text-xs text-slate-500">/{page.slug}/</span>
           <span className="rounded bg-slate-100 px-1.5 text-xs capitalize dark:bg-slate-700">{page.status}</span>
           <button

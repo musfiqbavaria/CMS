@@ -25,10 +25,10 @@ describe("kit", () => {
     expect(screen.getByText("Nothing here")).toBeInTheDocument();
   });
 
-  it("copies text without a clipboard API", async () => {
+  it("explains how to copy manually when the clipboard API is unavailable", async () => {
     render(<CopyButton text="hello" />);
     fireEvent.click(screen.getByText("Copy"));
-    expect(await screen.findByText("Copied!")).toBeInTheDocument();
+    expect(await screen.findByText("Copy manually")).toHaveAttribute("aria-live", "polite");
   });
 
   it("formats relative times", () => {

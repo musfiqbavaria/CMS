@@ -9,7 +9,7 @@ import { api } from "../../../shared/api/client";
 import type { ProgressEvent } from "../hooks";
 import { useSiteProgress } from "../hooks";
 import { StatusBadge, VerificationBadge } from "../components/StatusBadge";
-import { Card, CardTitle, CopyButton, Skeleton } from "../../../shared/ui/kit";
+import { Card, CardTitle, CopyButton, Skeleton, PageHeader } from "../../../shared/ui/kit";
 
 export default function VerifyPage() {
   const { id } = useParams();
@@ -120,7 +120,7 @@ export default function VerifyPage() {
     <div className="space-y-4">
       <div>
         <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <h1 className="mt-1 text-2xl font-bold">Connect {site.domain}</h1>
+        <PageHeader title="Connect your website" eyebrow="Connection setup" description={site.domain} />
         <div className="mt-2 flex gap-2">
           <StatusBadge status={site.status} />
           <VerificationBadge status={site.verification_status} />

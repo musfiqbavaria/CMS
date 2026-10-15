@@ -1,13 +1,14 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
-import { SidebarDesktop } from "./Sidebar";
+import { SidebarDesktop, SidebarMobile } from "./Sidebar";
 import { useAuthStore } from "../../stores/auth";
 import { useUiStore } from "../../stores/ui";
 
 afterEach(() => {
   cleanup();
   useAuthStore.getState().clearSession();
+  useUiStore.setState({ mobileNavOpen: false });
 });
 
 function signIn() {
@@ -36,8 +37,8 @@ describe("Sidebar", () => {
         <SidebarDesktop />
       </MemoryRouter>,
     );
-    expect(screen.getByText("Add Website").closest("a")).toHaveClass("bg-slate-900");
-    expect(screen.getByText("Websites").closest("a")).not.toHaveClass("bg-slate-900");
+    expect(screen.getByText("Add Website").closest("a")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Websites").closest("a")).not.toHaveAttribute("aria-current");
     useAuthStore.getState().clearSession();
   });
 
@@ -48,8 +49,18 @@ describe("Sidebar", () => {
         <SidebarDesktop />
       </MemoryRouter>,
     );
-    expect(screen.getByText("Build Website").closest("a")).toHaveClass("bg-slate-900");
-    expect(screen.getByText("Overview").closest("a")).not.toHaveClass("bg-slate-900");
+    expect(screen.getByText("Build Website").closest("a")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Overview").closest("a")).not.toHaveAttribute("aria-current");
     useAuthStore.getState().clearSession();
+  });
+  it("shows labels in the mobile drawer even with a collapsed desktop sidebar and closes on Escape", () => {
+    signIn();
+    useUiStore.setState({ mobileNavOpen: true, sidebarCollapsed: true });
+    render(<MemoryRouter><SidebarMobile /></MemoryRouter>);
+    expect(screen.getByRole("dialog", { name: "Navigation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close navigation" })).toHaveFocus();
+    expect(screen.getByText("Websites")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

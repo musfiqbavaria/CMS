@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft, KeyRound, Layers } from "lucide-react";
 import { confirmPasswordReset, requestPasswordReset } from "../api";
 
 const emailSchema = z.object({ email: z.string().email("Enter a valid email") });
@@ -45,9 +46,13 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow">
-        <h1 className="text-xl font-bold">Reset password</h1>
+    <main className="app-content flex min-h-screen flex-col items-center justify-center gap-7 bg-[var(--canvas)] p-5 text-[var(--ink)]">
+      <Link to="/login" className="flex items-center gap-2.5 text-sm font-semibold"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white"><Layers size={20} aria-hidden="true" /></span>CMS Platform</Link>
+      <div className="ui-card w-full max-w-[420px] !p-7 sm:!p-9">
+        <span className="ui-icon-well mb-5"><KeyRound size={21} aria-hidden="true" /></span>
+        <div className="ui-eyebrow">Let's get you back in</div>
+        <h1>{uid && token ? "Choose a new password" : "Reset your password"}</h1>
+        <p className="mt-3 text-xs leading-6 text-[var(--muted)]">{uid && token ? "Choose a strong password to keep your workspace secure." : "Enter your account email and we'll send you a link to reset your password."}</p>
         {done && (
           <p role="status" className="mt-4 rounded bg-green-50 p-2 text-sm text-green-700">
             {done}
@@ -87,8 +92,8 @@ export default function ResetPasswordPage() {
                   <p className="text-xs text-red-600">{resetForm.formState.errors.confirm.message}</p>
                 )}
               </div>
-              <button type="submit" className="w-full rounded bg-slate-900 p-2 font-medium text-white">
-                Set new password
+              <button type="submit" disabled={resetForm.formState.isSubmitting} className="ui-button w-full" data-variant="primary">
+                {resetForm.formState.isSubmitting ? "Updating..." : "Set new password"}
               </button>
             </form>
           ) : (
@@ -106,17 +111,17 @@ export default function ResetPasswordPage() {
                   <p className="text-xs text-red-600">{emailForm.formState.errors.email.message}</p>
                 )}
               </div>
-              <button type="submit" className="w-full rounded bg-slate-900 p-2 font-medium text-white">
-                Send reset link
+              <button type="submit" disabled={emailForm.formState.isSubmitting} className="ui-button w-full" data-variant="primary">
+                {emailForm.formState.isSubmitting ? "Sending..." : "Send reset link"}
               </button>
             </form>
           ))}
         <p className="mt-4 text-center text-sm">
-          <Link to="/login" className="text-slate-600 underline">
-            Back to sign in
+          <Link to="/login" className="inline-flex items-center gap-1.5 text-xs text-[var(--muted)] hover:text-[var(--accent)]">
+            <ArrowLeft size={13} aria-hidden="true" /> Back to sign in
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../shared/api/client";
 import { useAuthStore } from "../../stores/auth";
-import { Card, CardTitle, Skeleton } from "../../shared/ui/kit";
+import { Badge, Button, Card, CardTitle, EmptyState, Skeleton, PageHeader } from "../../shared/ui/kit";
+import { Plus } from "lucide-react";
 
 interface AdminUser {
   id: number;
@@ -60,12 +61,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Users & Roles</h1>
-        <button onClick={() => setShowNew((v) => !v)} className="rounded bg-slate-900 px-3 py-2 text-sm text-white">
-          Add user
-        </button>
-      </div>
+      <PageHeader title="Users & roles" description="Manage your team and the people who keep your websites moving." eyebrow="Your workspace, together" actions={<Button variant="primary" onClick={() => setShowNew((value) => !value)}><Plus size={14} aria-hidden="true" />{showNew ? "Close form" : "Add user"}</Button>} />
       {msg && (
         <p role={msg.kind === "ok" ? "status" : "alert"} className={`rounded p-2 text-sm ${msg.kind === "ok" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
           {msg.text} <button onClick={() => setMsg(null)} className="underline">Dismiss</button>
@@ -90,8 +86,11 @@ export default function UsersPage() {
       )}
       {users.isLoading ? (
         <Skeleton className="h-48" />
+      ) : users.isError ? (
+        <EmptyState title="Your team couldn't load" hint="Check your connection, then try again." action={<Button onClick={() => void users.refetch()}>Try again</Button>} />
       ) : (
         <Card>
+          <div className="mb-5 flex items-center justify-between gap-2"><CardTitle>Workspace members</CardTitle><Badge tone="slate">{users.data?.length ?? 0} members</Badge></div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -114,6 +113,7 @@ export default function UsersPage() {
                       </td>
                       <td className="py-2 pr-3">
                         <select
+                          aria-label={`Role for ${u.username}`}
                           value={u.role}
                           disabled={isSelf}
                           onChange={(e) => patch.mutate({ id: u.id, role: e.target.value })}
@@ -123,7 +123,7 @@ export default function UsersPage() {
                           <option value="superadmin">superadmin</option>
                         </select>
                       </td>
-                      <td className="py-2 pr-3">{u.is_2fa_enabled ? "On" : "Off"}</td>
+                      <td className="py-2 pr-3"><Badge tone={u.is_2fa_enabled ? "green" : "slate"}>{u.is_2fa_enabled ? "Enabled" : "Not enabled"}</Badge></td>
                       <td className="py-2 pr-3">
                         <input
                           type="checkbox"

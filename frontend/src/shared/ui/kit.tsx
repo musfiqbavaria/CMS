@@ -1,38 +1,32 @@
 import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Check, Copy, FolderOpen, Loader2, type LucideIcon } from "lucide-react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 ${className}`}>
+    <div className={`ui-card ${className}`}>
       {children}
     </div>
   );
 }
 
 export function CardTitle({ children }: { children: ReactNode }) {
-  return <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{children}</h2>;
+  return <h2 className="ui-card-title">{children}</h2>;
 }
 
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded bg-slate-200 dark:bg-slate-700 ${className}`} />;
+  return <div aria-hidden="true" className={`animate-pulse rounded-xl bg-slate-200/70 motion-reduce:animate-none dark:bg-slate-700/60 ${className}`} />;
 }
 
 export function Spinner({ label = "Loading…" }: { label?: string }) {
   return (
     <p role="status" className="flex items-center gap-2 text-sm text-slate-500">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600 dark:border-slate-600 dark:border-t-slate-300" />
+      <Loader2 aria-hidden="true" size={16} className="animate-spin motion-reduce:animate-none" />
       {label}
     </p>
   );
 }
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
-
-const BUTTON_STYLES: Record<ButtonVariant, string> = {
-  primary: "bg-slate-900 text-white hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200",
-  secondary: "border border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700",
-  danger: "border border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950",
-  ghost: "text-slate-600 underline hover:text-slate-900 dark:text-slate-300 dark:hover:text-white",
-};
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -42,7 +36,8 @@ export function Button({ variant = "secondary", className = "", type = "button",
   return (
     <button
       type={type}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${BUTTON_STYLES[variant]} ${className}`}
+      data-variant={variant}
+      className={`ui-button ${className}`}
       {...rest}
     />
   );
@@ -60,19 +55,16 @@ const BADGE_STYLES: Record<BadgeTone, string> = {
 
 export function Badge({ tone = "slate", children, className = "" }: { tone?: BadgeTone; children: ReactNode; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${BADGE_STYLES[tone]} ${className}`}>
+    <span className={`ui-badge ${BADGE_STYLES[tone]} ${className}`}>
       {children}
     </span>
   );
 }
 
 export function StatusDot({ status }: { status: "ok" | "error" | "unknown" }) {
-  const color =
-    status === "ok" ? "bg-green-500" : status === "error" ? "bg-red-500" : "bg-slate-400";
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={`h-2 w-2 rounded-full ${color}`} />
-      <span className="text-sm capitalize">{status}</span>
+    <span className="ui-status" data-status={status}>
+      <span className="capitalize">{status === "ok" ? "Healthy" : status === "error" ? "Needs attention" : "Not checked"}</span>
     </span>
   );
 }
@@ -81,16 +73,19 @@ export function PageHeader({
   title,
   description,
   actions,
+  eyebrow,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  eyebrow?: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="ui-page-header">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        {description && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{description}</p>}
+        {eyebrow && <div className="ui-eyebrow">{eyebrow}</div>}
+        <h1>{title}</h1>
+        {description && <p>{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -101,14 +96,17 @@ export function EmptyState({
   title,
   hint,
   action,
+  icon: Icon = FolderOpen,
 }: {
   title: string;
   hint?: string;
   action?: ReactNode;
+  icon?: LucideIcon;
 }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center dark:border-slate-600 dark:bg-slate-800">
-      <p className="font-medium">{title}</p>
+    <div className="ui-empty">
+      <span className="ui-icon-well mb-4"><Icon size={21} strokeWidth={1.6} aria-hidden="true" /></span>
+      <p className="text-sm font-semibold">{title}</p>
       {hint && <p className="mx-auto mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">{hint}</p>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}
     </div>
@@ -117,24 +115,27 @@ export function EmptyState({
 
 export function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
+  const [failed, setFailed] = useState(false);
   return (
     <button
-      onClick={() => {
-        const done = () => {
+      type="button"
+      onClick={async () => {
+        setFailed(false);
+        try {
+          if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+          await navigator.clipboard.writeText(text);
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
-        };
-        try {
-          const clip = navigator?.clipboard;
-          if (clip) void clip.writeText(text).then(done, done);
-          else done();
         } catch {
-          done();
+          setFailed(true);
         }
       }}
-      className="rounded border px-2 py-1 text-xs dark:border-slate-600"
+      title={failed ? "Select the text and copy it manually." : undefined}
+      className="ui-button"
+      data-variant="secondary"
     >
-      {copied ? "Copied!" : label}
+      {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+      <span aria-live="polite">{copied ? "Copied!" : failed ? "Copy manually" : label}</span>
     </button>
   );
 }

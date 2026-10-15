@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Badge, Card, PageHeader } from "../../../shared/ui/kit";
 import {
   useCreateCategory,
   useCreateProduct,
@@ -24,16 +25,17 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Products</h1>
+      <PageHeader title="Products" description="Keep your product catalog, pricing, and inventory in one place." eyebrow="Content" />
       <SitePicker />
       {!siteId ? (
         <p className="text-sm text-slate-500">Select a site first.</p>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name" className="flex-1 rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700" />
-            <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="9.99" inputMode="decimal" className="w-24 rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700" />
+          <Card><div className="flex flex-wrap gap-2">
+            <input aria-label="Product name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name" className="flex-1 rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700" />
+            <input aria-label="Product price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="9.99" inputMode="decimal" className="w-24 rounded border p-2 text-sm dark:border-slate-600 dark:bg-slate-700" />
             <button
+              disabled={create.isPending || !name.trim()}
               onClick={() => {
                 if (!name.trim()) return;
                 create.mutate(
@@ -43,12 +45,12 @@ export default function ProductsPage() {
               }}
               className="rounded bg-slate-900 px-3 py-2 text-sm text-white"
             >
-              Add product
+              {create.isPending ? "Adding..." : "Add product"}
             </button>
-          </div>
+          </div></Card>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <span>Categories: {(cats ?? []).map((c) => c.name).join(", ") || "—"}</span>
-            <input value={catName} onChange={(e) => setCatName(e.target.value)} placeholder="New category" className="rounded border p-1.5 text-xs dark:border-slate-600 dark:bg-slate-700" />
+            <input aria-label="New product category" value={catName} onChange={(e) => setCatName(e.target.value)} placeholder="New category" className="rounded border p-1.5 text-xs dark:border-slate-600 dark:bg-slate-700" />
             <button onClick={() => { if (catName.trim()) addCat.mutate({ name: catName.trim() }, { onSuccess: () => setCatName("") }); }} className="rounded border px-2 py-1 text-xs">
               Add
             </button>
@@ -99,13 +101,11 @@ function ProductRow({ siteId, product: p, categories }: { siteId: number; produc
   }
 
   return (
-    <li className="rounded border p-3 text-sm dark:border-slate-700">
-      <div className="flex items-center gap-2">
-        <button onClick={() => setOpen((v) => !v)} className="font-medium underline">{p.name}</button>
-        <span className="font-mono text-xs text-slate-500">/shop/{p.slug}/</span>
-        <span>${p.price} · stock {p.stock}</span>
-        <span className="rounded bg-slate-100 px-1.5 text-xs capitalize dark:bg-slate-700">{p.status}</span>
-        <span className="ml-auto flex gap-1">
+    <li className="ui-card text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="min-w-0 flex-1"><button aria-expanded={open} onClick={() => setOpen((v) => !v)} className="text-left font-semibold [overflow-wrap:anywhere] hover:text-blue-600">{p.name}</button><p className="mt-1 break-all font-mono text-[11px] text-[var(--muted)]">/shop/{p.slug}/</p><p className="mt-2 text-xs text-[var(--muted)]">${p.price} · {p.stock} in stock</p></div>
+        <Badge tone={p.status === "published" ? "green" : "slate"}>{p.status}</Badge>
+        <span className="flex w-full flex-wrap gap-2 border-t border-[var(--line)] pt-3 sm:ml-auto sm:w-auto sm:border-0 sm:pt-0">
           <button onClick={() => update.mutate({ id: p.id, status: p.status === "published" ? "draft" : "published" })} className="rounded border px-2 py-0.5 text-xs">
             {p.status === "published" ? "Unpublish" : "Publish"}
           </button>
@@ -114,7 +114,7 @@ function ProductRow({ siteId, product: p, categories }: { siteId: number; produc
       </div>
       {open && (
         <div className="mt-2 grid gap-2 text-xs">
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <label>Price<input value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="mt-1 w-full rounded border p-1.5 dark:border-slate-600 dark:bg-slate-700" /></label>
             <label>Compare at<input value={form.compare_at} onChange={(e) => setForm({ ...form, compare_at: e.target.value })} className="mt-1 w-full rounded border p-1.5 dark:border-slate-600 dark:bg-slate-700" /></label>
             <label>Stock<input type="number" min={0} value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} className="mt-1 w-full rounded border p-1.5 dark:border-slate-600 dark:bg-slate-700" /></label>

@@ -176,7 +176,8 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
     <div className="space-y-4">
       <PageHeader
         title="Websites"
-        description="Every site you manage — connected or built — lives here."
+        eyebrow="Your portfolio"
+        description="Every website, one place. Manage your connected sites and the ones you build here."
         actions={<Button variant="primary" onClick={openNew}>Add website</Button>}
       />
 
@@ -193,8 +194,10 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
       )}
 
       <Card>
+        <div className="mb-5 flex items-center justify-between"><h2 className="ui-card-title">All websites</h2><span className="text-xs text-[var(--muted)]">{data?.count ?? 0} {data?.count === 1 ? "website" : "websites"}</span></div>
         <div className="flex flex-wrap gap-2">
           <input
+            aria-label="Search websites by name or domain"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search name or domain…"
