@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+for (const mode of ["dev", "prod"]) {
+  test(`${mode} proxy preserves the client hostname and external port`, async () => {
+    const config = await readFile(new URL(`../conf.d/${mode}.conf`, import.meta.url), "utf8");
+    const hostHeaders = [...config.matchAll(/proxy_set_header\s+Host\s+([^;]+);/g)];
+    assert.ok(hostHeaders.length > 0, "Expected proxy Host headers");
+    for (const [, value] of hostHeaders) {
+      assert.equal(value.trim(), "$http_host", "$host drops :8080 from generated media URLs");
+    }
+  });
+}
