@@ -61,11 +61,15 @@ describe("EditorPreview", () => {
   it("keeps the verified CMS preview browseable while staying opaque and sandboxed", () => {
     render(<EditorPreview html="<h1>My draft</h1>" liveUrl="/connector/v1/preview/testsite/" onSelect={vi.fn()} onEdit={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Live website" }));
-    const frame = screen.getByTitle("Live website preview");
+    const frame = screen.getByTitle("Live website preview") as HTMLIFrameElement;
     expect(frame.getAttribute("sandbox")).toContain("allow-popups");
     expect(frame.getAttribute("sandbox")).not.toContain("allow-same-origin");
+    const channel = new URL(frame.getAttribute("src")!, window.location.origin).searchParams.get("edit_channel");
+    fireEvent(window, new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: "cms:editor:ready", channel, count: 5 } }));
+    expect(screen.getByText(/5 editable areas on this page/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Click to edit" }));
     expect(screen.getByText(/Links browse the live pages/)).toBeInTheDocument();
+    expect(screen.getByText(/5 editable areas on this page/)).toBeInTheDocument();
   });
 
   it("sends back and forward history commands to the live preview bridge only", () => {

@@ -104,6 +104,7 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
   const liveSrc = showingLive && editable ? liveEditUrl(liveUrl, channel) : liveUrl;
   const connected = connection.channel === channel && connection.count !== null;
   const waiting = connection.channel === channel && connection.slow;
+  const editableAreas = connected && connection.count !== null ? `${connection.count} editable area${connection.count === 1 ? "" : "s"} on this page` : null;
   const scrollSource = showingLive ? "live" : "draft";
 
   const configure = useCallback(() => {
@@ -177,7 +178,7 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
       </div>
       {onSelect && <div className="site-editor-inspector-status" role="status" aria-live="polite" data-warning={unmapped || waiting || (connected && connection.count === 0)}>
         <MousePointer2 size={14} aria-hidden="true" />
-        <p>{!editable ? "Use Draft design or a verified CMS website preview for click-to-edit." : !editMode ? (showingLive ? "Selection is off. Links browse the live pages here; forms and scripts stay disabled." : "Selection is off. Preview links and forms remain disabled.") : waiting ? "The inspector has not connected. Try Draft design or check your preview connection." : !connected ? "Connecting the preview inspector…" : connection.count === 0 ? "No mapped areas found. Review selector mappings or use Draft design." : unmapped ? "This area is not mapped. Choose a section from the editor or update its selector mapping." : selectedKey ? <><strong>{EDIT_TARGETS[selectedKey].label}</strong> selected. Edit its settings in the panel.</> : "Hover or tab to an area, then click or press Enter to edit its settings. Ctrl/⌘+click a link to browse the site."}</p>
+        <p>{!editable ? "Use Draft design or a verified CMS website preview for click-to-edit." : !editMode ? (showingLive ? `Selection is off.${editableAreas ? ` ${editableAreas} — turn Click to edit on to select them.` : ""} Links browse the live pages here; forms and scripts stay disabled.` : "Selection is off. Preview links and forms remain disabled.") : waiting ? "The inspector has not connected. Try Draft design or check your preview connection." : !connected ? "Connecting the preview inspector…" : connection.count === 0 ? "No mapped areas found. Review selector mappings or use Draft design." : unmapped ? "This area is not mapped. Choose a section from the editor or update its selector mapping." : selectedKey ? <><strong>{EDIT_TARGETS[selectedKey].label}</strong> selected. Edit its settings in the panel.</> : `${editableAreas ? `${editableAreas}. ` : ""}Hover or tab to one, then click or press Enter to edit its settings. Ctrl/⌘+click a link to browse the site.`}</p>
       </div>}
       <div className="site-editor-browser-bar"><span aria-hidden="true" className="site-editor-browser-dots"><i /><i /><i /></span><span>{showingLive ? liveUrl : "Template canvas"}</span><span className="ml-auto">{selected.width} px</span></div>
       <div className="site-editor-preview-stage">
