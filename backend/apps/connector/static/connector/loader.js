@@ -5,6 +5,10 @@
   var currentScript = document.currentScript;
   var nonce = currentScript && currentScript.nonce;
   var reportToken = currentScript && currentScript.getAttribute("data-cms-report-token");
+  // The editor preview injects this tag with data-cms-preview: content, metadata
+  // and styles apply so the preview matches the live site, but user custom
+  // JavaScript stays out of the sandbox and no delivery reports are sent.
+  var preview = !!currentScript && currentScript.getAttribute("data-cms-preview") === "1";
   var deliveryRevision = "";
 
   function findSite() {
@@ -364,7 +368,7 @@
     });
     applyPageBlocks(cfg.blocks);
     if (cfg.verified && (data.custom_css || changed(data, "custom.css"))) styleTag("custom", data.custom_css || "");
-    if (cfg.verified && data.custom_js && !document.querySelector("script[data-cms-custom]")) {
+    if (!preview && cfg.verified && data.custom_js && !document.querySelector("script[data-cms-custom]")) {
       var script = document.createElement("script"); script.setAttribute("data-cms-custom", "true");
       if (nonce) script.nonce = nonce;
       script.textContent = data.custom_js; document.head.appendChild(script);
@@ -377,7 +381,9 @@
   function reportDelivery() {
     // Reporting is best-effort and must never interfere with the website.
     // No credentials, full URL, query strings, or fragments are collected.
-    if (!reportToken) { status.reporting = "unavailable"; return; }
+    // The loader endpoint stamps a fresh ticket on any tag that loads it, so
+    // preview runs must ignore the token: only real website views may report.
+    if (!reportToken || preview) { status.reporting = "unavailable"; return; }
     if (status.state !== "error" && (!status.version || !deliveryRevision)) {
       status.reporting = "unavailable"; return;
     }

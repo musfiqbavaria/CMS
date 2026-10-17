@@ -108,6 +108,7 @@ async function run(data, mappings = [], options = {}) {
   };
   if (options.noKey) dom.script.src = "https://cms.example.com/connector/v1/loader.js";
   if (options.reportToken) dom.script.setAttribute("data-cms-report-token", options.reportToken);
+  if (options.preview) dom.script.setAttribute("data-cms-preview", "1");
   const window = { document, location: new URL(options.pageUrl || "https://bavariagarment.de/"), console: {} };
   const payload = { verified: options.verified ?? true, published_version: 7, delivery_revision: "a".repeat(64), data: { overrides: [], ...data }, mappings };
   vm.runInNewContext(source, {
@@ -235,6 +236,20 @@ test("unverified sites cannot execute custom code; verified scripts preserve the
   assert.equal(unverified.head.querySelector('style[data-cms="custom"]'), null);
   const verified = await run({ custom_js: "window.changed=true" });
   assert.equal(verified.head.querySelector("script[data-cms-custom]").nonce, "test-nonce");
+});
+
+test("preview mode applies published content and styles but never custom JavaScript", async () => {
+  const result = await run({ site_name: "BG ERP 1", custom_js: "window.changed=true", custom_css: "body{color:red}" }, [
+    { key: "site_name", selector: "header strong" },
+  ], { preview: true, reportToken: "signed-ticket" });
+  assert.equal(result.brand.querySelector("strong").textContent, "BG ERP 1");
+  assert.equal(result.head.querySelector("script[data-cms-custom]"), null);
+  assert.match(result.head.querySelector('style[data-cms="custom"]').textContent, /color:red/);
+  assert.equal(result.status.state, "ready");
+  // The loader endpoint stamps a report ticket on any tag that loads it; a
+  // preview must ignore it so preview views never count as deliveries.
+  assert.equal(result.status.reporting, "unavailable");
+  assert.equal(result.requests.length, 1);
 });
 
 test("config requests revalidate without cookies and errors are visible diagnostically", async () => {

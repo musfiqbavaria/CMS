@@ -45,9 +45,18 @@ def test_nonce_bridge_and_opaque_sandbox_protect_the_admin(client, site):
     policy = response["Content-Security-Policy"]
     nonce = re.search(r'<script nonce="([^"]+)"', body)[1]
     assert f"script-src 'nonce-{nonce}'" in policy
+    # The published connector runs inside the preview (nonce-stamped, preview
+    # mode) so site name, metadata and favicon match the live website.
+    loader = re.search(
+        r'<script nonce="([^"]+)" src="([^"]*loader\.js[^"]*)" data-cms-preview="1"></script>',
+        body,
+    )
+    assert loader[1] == nonce
+    assert loader[2] == f"http://testserver/connector/v1/loader.js?site={site.site_key}"
+    assert body.index(loader[0]) < body.index("</body>")
     for directive in [
         "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox",
-        "connect-src 'none'",
+        "connect-src http://testserver",
         "form-action 'none'",
         "frame-src 'none'",
         "frame-ancestors 'self'",
@@ -139,7 +148,10 @@ def test_invalid_channels_are_rejected_before_fetching(client, site, channel):
 def test_plain_preview_stays_isolated_without_injecting_a_bridge(client, site):
     response = preview(client, site, "")
     assert response.status_code == 200
-    assert "editor-bridge.js" not in response.content.decode()
+    body = response.content.decode()
+    assert "editor-bridge.js" not in body
+    # The published connector still runs so the direct preview matches the site.
+    assert 'data-cms-preview="1"' in body
     policy = response["Content-Security-Policy"]
     assert "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox" in policy
     assert "allow-same-origin" not in policy

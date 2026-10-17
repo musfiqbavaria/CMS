@@ -24,12 +24,17 @@ Living file: completed phases, key decisions, next steps.
   trimmed label, current preview path), persist before the preview reloads, and
   ride the normal draft/publish lifecycle. Page areas are editable in an inline
   strip in the preview and listed under Advanced → "Page text areas".
+- Live previews match the real site: the CMS injects a nonce-stamped loader tag
+  in preview mode, so published content, site name, browser title and favicon
+  render inside the preview. Preview runs never report deliveries and never run
+  user custom JavaScript; the website's own scripts stay CSP-blocked.
 - Delivery: the connector payload ships `blocks`; the loader applies matching-path
   areas after the mappings (page areas override mapping text), skips empty text,
   and reports unmatched areas only on their own path (`page:<label>` keys).
 - Verified in containers: backend 175 pytest + frontend 74 vitest, editor E2E on
-  the connected ERP site (create → persist → reselect → remove), and a loader
-  fixture E2E proving path-scoped apply/report. Prod compose rebuilt and
+  the connected ERP site (create → persist → reselect → remove), a loader
+  fixture E2E proving path-scoped apply/report, and preview checks showing the
+  published site name/favicon and no delivery report. Prod compose rebuilt and
   `/api/health/` 200.
 
 ## Completed

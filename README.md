@@ -136,6 +136,12 @@ messages. No bridge is installed into the original website, and its source files
 are not modified. Do not remove the dedicated Nginx preview location: it preserves
 the preview's nonce-based CSP instead of inheriting the admin SPA's CSP.
 
+The preview also runs the **published connector** in preview mode, so it matches
+what visitors see on the live site: configured content, site name, browser title,
+favicon, theme and generated sections all apply. The preview tag is nonce-stamped
+and skips delivery reports and user custom JavaScript; the website's own script
+tags stay CSP-blocked, so preview traffic never counts as a website delivery.
+
 ## Connector & proxy (Phase 6)
 
 - Public delivery under `/connector/`: `GET v1/config/<site_key>/` (published only,

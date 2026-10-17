@@ -288,7 +288,12 @@ def preview_page(request, site_key: str):
                 "Upstream did not return HTML.", status=502, content_type="text/plain"
             )
         )
-    from .editor_preview import inspector_tag, preview_nonce, preview_policy
+    from .editor_preview import (
+        inspector_tag,
+        loader_tag,
+        preview_nonce,
+        preview_policy,
+    )
 
     html = FRAME_BLOCK_META_RE.sub("", html)
     html = re.sub(
@@ -308,6 +313,14 @@ def preview_page(request, site_key: str):
     nonce = preview_nonce()
     inspector = str(inspector_tag(request, site, channel, nonce)) if channel else ""
     html = html[:head_end] + base_tag + inspector + html[head_end:]
+    # Load the published configuration like a real installation would: at the
+    # end of the body, after the website's own markup exists.
+    loader = str(loader_tag(request, site, nonce))
+    body_end = html.lower().rfind("</body>")
+    if body_end == -1:
+        html += loader
+    else:
+        html = html[:body_end] + loader + html[body_end:]
     resp = HttpResponse(html, content_type="text/html")
     resp["Cache-Control"] = "no-store"
     resp["Content-Security-Policy"] = preview_policy(request, site, nonce)

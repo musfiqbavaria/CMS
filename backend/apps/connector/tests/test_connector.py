@@ -206,7 +206,10 @@ def test_preview_renders_verified_site_without_framing_blockers(client, site):
     assert "X-Frame-Options" not in body
     assert "frame-ancestors" not in body
     assert '<base href="https://shop.example.com/">' in body
-    assert "loader.js" not in body  # pure original, no injection
+    # The published connector runs in preview mode so the preview matches the
+    # live site; the website's own script tags stay nonce-blocked.
+    assert f"/connector/v1/loader.js?site={site.site_key}" in body
+    assert 'data-cms-preview="1"' in body
     assert resp["Cache-Control"] == "no-store"
 
 
