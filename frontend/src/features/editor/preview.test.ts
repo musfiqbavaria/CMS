@@ -57,6 +57,13 @@ describe("editor preview utils", () => {
   it("does not resurrect a legacy logo when the shared logo is cleared", () => {
     const html = configToHtml({ ...base, header: { ...base.header, logo_url: "/old-logo.png" } });
     expect(html).not.toContain("/old-logo.png");
-    expect(html).toContain("<strong>Acme</strong>");
+    expect(html).toContain('<strong data-cms-edit="site_name">Acme</strong>');
+  });
+
+  it("marks visible draft sections without allowing user text to create edit targets", () => {
+    const document = new DOMParser().parseFromString(configToHtml(base), "text/html");
+    expect(document.querySelector('[data-cms-edit="hero_heading"]')?.textContent).toBe("Welcome");
+    expect(document.querySelector('[data-cms-edit="navigation"] a')?.textContent).toBe("Home");
+    expect(document.querySelector('[data-cms-edit="footer_copyright"]')).not.toBeNull();
   });
 });

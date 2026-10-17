@@ -14,6 +14,7 @@ import { Badge, Button, Card, PageHeader, Spinner } from "../../../shared/ui/kit
 import { EditorPreview, EditorSections, SECTION_DETAILS, SECTION_GROUPS, sectionLabel } from "../components/EditorWorkspace";
 import { AdvancedTab } from "./AdvancedTab";
 import { cmsOrigin, isLocalCmsOrigin } from "../../connector/snippet";
+import { EDIT_TARGETS, type EditTargetKey } from "../clickToEdit";
 import "../editor.css";
 
 const sectionOrder = SECTION_GROUPS.flatMap((group) => group.sections);
@@ -53,6 +54,9 @@ export default function EditorPage() {
   const [saving, setSaving] = useState(false);
   const [operation, setOperation] = useState<"save" | "publish" | null>(null);
   const [banner, setBanner] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [previewSelection, setPreviewSelection] = useState<EditTargetKey | null>(null);
+  const [focusRequest, setFocusRequest] = useState<{ key: EditTargetKey; serial: number } | null>(null);
+  const settingsPanel = useRef<HTMLElement>(null);
 
   const form = useForm<SiteConfigDraft>();
   const loadedFor = useRef<number | null>(null);
@@ -66,6 +70,28 @@ export default function EditorPage() {
   const publish = usePublish(siteId);
   const busy = operation !== null || saveDraft.isPending || publish.isPending;
   const localOnly = isLocalCmsOrigin(cmsOrigin(site?.connector_origin));
+
+  function selectFromPreview(key: EditTargetKey) {
+    if (busy) return;
+    setPreviewSelection(key);
+    setTab(EDIT_TARGETS[key].section);
+    setView("split");
+    setFocusRequest((previous) => ({ key, serial: (previous?.serial ?? 0) + 1 }));
+  }
+
+  useEffect(() => {
+    if (!focusRequest) return;
+    const panel = settingsPanel.current;
+    const wrapper = panel?.querySelector<HTMLElement>(`[data-editor-field="${EDIT_TARGETS[focusRequest.key].field}"]`);
+    const control = wrapper?.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled])");
+    if (control) {
+      control.focus({ preventScroll: true });
+      control.scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: "instant" });
+    } else {
+      panel?.focus({ preventScroll: true });
+      panel?.scrollIntoView?.({ block: "nearest", behavior: "instant" });
+    }
+  }, [focusRequest]);
 
   useEffect(() => {
     if (config && loadedFor.current !== config.id) {
@@ -181,8 +207,7 @@ export default function EditorPage() {
 
   const SectionIcon = SECTION_DETAILS[tab].icon;
   const nextSection = sectionOrder[sectionOrder.indexOf(tab) + 1];
-  // Verified connected sites render through the CMS preview proxy (same
-  // origin, framing blockers removed); everything else loads directly.
+  // Verified sites use the isolated, read-only CMS layout preview.
   const liveUrl =
     site?.type === "connected" && site?.verification_status === "verified"
       ? `/connector/v1/preview/${site.site_key}/`
@@ -204,7 +229,7 @@ export default function EditorPage() {
         <div className="site-editor-context-links">
           <Link to={`/websites/${siteId}/publish-status`} className="ui-button" data-variant="secondary"><CheckCircle2 size={14} aria-hidden="true" /> Publish status</Link>
           <Link to={`/websites/${siteId}/setup`} className="ui-button" data-variant="secondary"><Plug size={14} aria-hidden="true" /> Connection</Link>
-          {liveUrl && <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="ui-button" data-variant="secondary">Open website <ArrowUpRight size={14} aria-hidden="true" /></a>}
+          {site && <a href={publicSiteUrl(site.public_url || site.domain)} target="_blank" rel="noopener noreferrer" className="ui-button" data-variant="secondary">Open website <ArrowUpRight size={14} aria-hidden="true" /></a>}
         </div>
       </Card>
 
@@ -234,9 +259,9 @@ export default function EditorPage() {
       <div className="site-editor-layout" data-view={view}>
         {view !== "preview" && (
           <div className="site-editor-settings">
-            <EditorSections active={tab} onSelect={setTab} />
+            <EditorSections active={tab} onSelect={(key) => { setTab(key); setPreviewSelection(null); }} />
             <div className="site-editor-form-column space-y-4">
-              <section id="editor-section-content" aria-labelledby="editor-section-heading">
+              <section ref={settingsPanel} tabIndex={-1} id="editor-section-content" aria-labelledby="editor-section-heading">
                 <Card>
                   <div className="site-editor-form-heading">
                     <span className="ui-icon-well"><SectionIcon size={19} aria-hidden="true" /></span>
@@ -248,7 +273,7 @@ export default function EditorPage() {
                   </fieldset>
                   <div className="site-editor-form-footer">
                     <p>Changes stay in your draft until you publish.</p>
-                    {nextSection && <Button onClick={() => setTab(nextSection)}>Next: {sectionLabel(nextSection)} <ArrowRight size={13} aria-hidden="true" /></Button>}
+                    {nextSection && <Button onClick={() => { setTab(nextSection); setPreviewSelection(null); }}>Next: {sectionLabel(nextSection)} <ArrowRight size={13} aria-hidden="true" /></Button>}
                   </div>
                 </Card>
               </section>
@@ -268,7 +293,7 @@ export default function EditorPage() {
             </div>
           </div>
         )}
-        {view !== "editor" && <EditorPreview html={previewHtml} liveUrl={liveUrl} onEdit={() => setView("editor")} />}
+        {view !== "editor" && <EditorPreview key={siteId} html={previewHtml} liveUrl={liveUrl} selectedKey={previewSelection} onSelect={selectFromPreview} onEdit={() => setView("editor")} />}
       </div>
 
       <UnsavedGuard when={dirty} />

@@ -32,7 +32,7 @@ export function HeaderTab({ control, siteId }: { control: C; siteId: number }) {
 export function FooterTab({ control }: { control: C }) {
   const { fields, append, remove } = useFieldArray({ control, name: "footer.columns" });
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-editor-field="footer.columns">
       {fields.map((col, i) => (
         <div key={col.id} className="rounded border p-3 dark:border-slate-700">
           <div className="flex items-center gap-2">

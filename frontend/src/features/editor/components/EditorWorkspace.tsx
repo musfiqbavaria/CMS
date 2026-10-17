@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight, ChevronRight, Code2, Globe2, Image, LayoutTemplate,
-  Menu, Monitor, Paintbrush, PanelBottom, PanelTop, Search, Settings2,
+  Menu, Monitor, MousePointer2, Paintbrush, PanelBottom, PanelTop, Search, Settings2,
   Share2, Smartphone, Sparkles, Tablet, type LucideIcon,
 } from "lucide-react";
 import { Card } from "../../../shared/ui/kit";
 import { EDITOR_TABS, type EditorTabKey } from "../types";
+import { editableDraft, editorMessage, EDIT_TARGETS, isCmsPreview, liveEditUrl, type EditTargetKey } from "../clickToEdit";
 
 export const SECTION_DETAILS: Record<EditorTabKey, { icon: LucideIcon; description: string }> = {
   general: { icon: Globe2, description: "Give your website a name and a short introduction." },
@@ -77,14 +78,63 @@ const DEVICES = [
   { key: "mobile", label: "Mobile", icon: Smartphone, width: 390, height: 844 },
 ] as const;
 
-export function EditorPreview({ html, liveUrl, onEdit }: { html: string; liveUrl: string | null; onEdit: () => void }) {
+export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: {
+  html: string;
+  liveUrl: string | null;
+  onEdit: () => void;
+  onSelect?: (key: EditTargetKey) => void;
+  selectedKey?: EditTargetKey | null;
+}) {
   const [device, setDevice] = useState<(typeof DEVICES)[number]["key"]>("desktop");
   const [source, setSource] = useState<"draft" | "live">("draft");
   const [availableWidth, setAvailableWidth] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
+  const iframe = useRef<HTMLIFrameElement>(null);
+  const scrollMemory = useRef({ draft: 0, live: 0 });
+  const [editMode, setEditMode] = useState(true);
+  const [connection, setConnection] = useState<{ channel: string; count: number | null; slow: boolean }>({ channel: "", count: null, slow: false });
+  const [unmapped, setUnmapped] = useState(false);
   const selected = DEVICES.find((item) => item.key === device)!;
   const scale = availableWidth > 0 ? Math.min(1, availableWidth / selected.width) : 1;
   const showingLive = source === "live" && liveUrl !== null;
+  const editable = !!onSelect && (!showingLive || isCmsPreview(liveUrl));
+  const documentKey = showingLive ? liveUrl : html;
+  const channel = useMemo(() => Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join(""), [documentKey, source]);
+  const draftHtml = useMemo(() => editable ? editableDraft(html, channel) : html, [editable, html, channel]);
+  const liveSrc = showingLive && editable ? liveEditUrl(liveUrl, channel) : liveUrl;
+  const connected = connection.channel === channel && connection.count !== null;
+  const waiting = connection.channel === channel && connection.slow;
+  const scrollSource = showingLive ? "live" : "draft";
+
+  const configure = useCallback(() => {
+    iframe.current?.contentWindow?.postMessage({
+      type: "cms:editor:configure", channel, enabled: editMode,
+      key: selectedKey ?? null, y: scrollMemory.current[scrollSource],
+    }, "*"); // The sandbox has an opaque origin; the recipient validates source, origin and channel.
+  }, [channel, editMode, selectedKey, scrollSource]);
+
+  useEffect(() => {
+    if (!editable) return;
+    function receive(event: MessageEvent) {
+      const message = editorMessage(event, iframe.current?.contentWindow ?? null, channel);
+      if (!message) return;
+      if (message.type === "ready") {
+        setConnection({ channel, count: message.count, slow: false });
+        configure();
+      } else if (message.type === "scroll") {
+        scrollMemory.current[scrollSource] = message.y;
+      } else if (message.type === "select" && editMode) {
+        setUnmapped(false);
+        onSelect?.(message.key);
+      } else if (message.type === "unmapped" && editMode) {
+        setUnmapped(true);
+      }
+    }
+    window.addEventListener("message", receive);
+    configure();
+    const timer = setTimeout(() => setConnection((current) => current.channel === channel && current.count !== null ? current : { channel, count: null, slow: true }), 20_000);
+    return () => { window.removeEventListener("message", receive); clearTimeout(timer); };
+  }, [editable, channel, configure, editMode, onSelect, scrollSource]);
 
   useEffect(() => {
     const element = viewport.current;
@@ -111,6 +161,7 @@ export function EditorPreview({ html, liveUrl, onEdit }: { html: string; liveUrl
               <button type="button" aria-pressed={showingLive} onClick={() => setSource("live")}>Live website</button>
             </div>
           )}
+          {onSelect && <button type="button" className="ui-button site-editor-inspect-toggle" data-variant={editMode && editable ? "primary" : "secondary"} disabled={!editable} aria-pressed={editMode && editable} onClick={() => { setEditMode((current) => !current); setUnmapped(false); }}><MousePointer2 size={14} aria-hidden="true" />Click to edit</button>}
           <div role="group" aria-label="Preview device" className="site-editor-segmented">
             {DEVICES.map(({ key, label, icon: Icon }) => (
               <button type="button" key={key} aria-label={`${label} preview`} title={label} aria-pressed={device === key} onClick={() => setDevice(key)}><Icon size={16} aria-hidden="true" /></button>
@@ -118,21 +169,25 @@ export function EditorPreview({ html, liveUrl, onEdit }: { html: string; liveUrl
           </div>
         </div>
       </div>
+      {onSelect && <div className="site-editor-inspector-status" role="status" aria-live="polite" data-warning={unmapped || waiting || (connected && connection.count === 0)}>
+        <MousePointer2 size={14} aria-hidden="true" />
+        <p>{!editable ? "Use Draft design or a verified CMS website preview for click-to-edit." : !editMode ? "Selection is off. Preview links and forms remain disabled." : waiting ? "The inspector has not connected. Try Draft design or check your preview connection." : !connected ? "Connecting the preview inspector…" : connection.count === 0 ? "No mapped areas found. Review selector mappings or use Draft design." : unmapped ? "This area is not mapped. Choose a section from the editor or update its selector mapping." : selectedKey ? <><strong>{EDIT_TARGETS[selectedKey].label}</strong> selected. Edit its settings in the panel.</> : "Hover or tab to an area, then click or press Enter to edit its settings."}</p>
+      </div>}
       <div className="site-editor-browser-bar"><span aria-hidden="true" className="site-editor-browser-dots"><i /><i /><i /></span><span>{showingLive ? liveUrl : "Template canvas"}</span><span className="ml-auto">{selected.width} px</span></div>
       <div className="site-editor-preview-stage">
         <div ref={viewport} className="site-editor-preview-viewport">
           <div className="site-editor-preview-frame" style={{ width: selected.width * scale, height: selected.height * scale }}>
             {showingLive ? (
-              <iframe title="Live website preview" src={liveUrl} sandbox="allow-scripts allow-same-origin" style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+              <iframe ref={iframe} title="Live website preview" src={liveSrc!} sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
             ) : (
-              <iframe title="Draft preview" srcDoc={html} sandbox="allow-scripts" style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+              <iframe ref={iframe} title="Draft preview" srcDoc={draftHtml} sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
             )}
           </div>
         </div>
       </div>
       <div className="site-editor-preview-footer">
         {showingLive ? (
-          <p>This is your original website, served through the CMS preview proxy so framing blockers don’t apply. Draft edits appear here after you publish.</p>
+          <p>Read-only original layout. Website scripts, links, forms and API calls are disabled in the CMS preview. Only mapped areas are selectable; changes stay in your draft until you publish.</p>
         ) : (
           <p>This template illustrates your settings, not your website’s exact layout. The connected website keeps its own HTML and selector mappings.</p>
         )}

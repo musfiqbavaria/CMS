@@ -108,6 +108,27 @@ Open:
   upload + crop (aspect, zoom), live iframe preview, autosave status, version
   history with publish/rollback, reset-to-published, route + browser unsaved guards.
 
+### Click-to-edit preview
+
+In the website editor's **Split** or **Preview** view, leave **Click to edit**
+enabled. Hover over a supported area to see its outline, then click it (or tab
+to it and press Enter) to open and focus its existing editing controls. In-progress
+form values are preserved. Selection never saves or publishes content by itself;
+editing fields follows the existing draft autosave and explicit Publish workflow.
+
+The draft canvas uses explicit edit markers. The verified original-site preview
+uses the website's enabled selector mappings; missing or disabled mappings are
+not guessed. Unsupported content is not arbitrary inline HTML editing. Empty
+sections can still be added or edited using the section navigation.
+
+Original-site previews are read-only, opaque-origin sandboxes. Website scripts,
+forms, nested frames, and API calls are blocked; their static styles and images
+can render. Script-rendered content may therefore be absent. Only the CMS preview
+inspector runs, communicating through source-, origin-, channel-, and field-checked
+messages. No bridge is installed into the original website, and its source files
+are not modified. Do not remove the dedicated Nginx preview location: it preserves
+the preview's nonce-based CSP instead of inheriting the admin SPA's CSP.
+
 ## Connector & proxy (Phase 6)
 
 - Public delivery under `/connector/`: `GET v1/config/<site_key>/` (published only,

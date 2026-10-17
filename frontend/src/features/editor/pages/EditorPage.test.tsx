@@ -55,6 +55,21 @@ async function renderEditor() {
 }
 
 describe("connected website editor workspace", () => {
+  it("opens and focuses a clicked preview field without losing draft edits or publishing", async () => {
+    await renderEditor();
+    fireEvent.change(screen.getByLabelText("Site name"), { target: { value: "Unsaved brand" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Preview$/ }));
+    const frame = screen.getByTitle("Draft preview") as HTMLIFrameElement;
+    const content = new DOMParser().parseFromString(frame.getAttribute("srcdoc")!, "text/html");
+    const channel = JSON.parse(content.querySelector("[data-cms-editor-config]")!.getAttribute("data-cms-editor-config")!).channel;
+    fireEvent(window, new MessageEvent("message", { origin: "null", source: frame.contentWindow, data: { type: "cms:editor:select", channel, key: "hero_heading" } }));
+    expect(screen.getByLabelText("Heading")).toHaveValue("Welcome");
+    expect(screen.getByLabelText("Heading")).toHaveFocus();
+    expect(screen.getByTitle("Draft preview")).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("Choose an editor section"), { target: { value: "general" } });
+    expect(screen.getByLabelText("Site name")).toHaveValue("Unsaved brand");
+  });
   it("keeps in-progress edits when switching sections and workspace views", async () => {
     await renderEditor();
     fireEvent.change(screen.getByLabelText("Site name"), { target: { value: "Acme Studio" } });

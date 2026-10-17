@@ -5,7 +5,7 @@ import MediaPicker from "./MediaPicker";
 
 export function Text<T extends FieldValues>({ label, name, control, placeholder, onValueChange }: { label: string; name: Path<T>; control: Control<T>; placeholder?: string; onValueChange?: (value: string, previous: unknown) => void }) {
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" data-editor-field={name}>
       <span className="font-medium">{label}</span>
       <Controller
         name={name}
@@ -20,7 +20,7 @@ export function Text<T extends FieldValues>({ label, name, control, placeholder,
 
 export function TextArea<T extends FieldValues>({ label, name, control, rows = 3, mono }: { label: string; name: Path<T>; control: Control<T>; rows?: number; mono?: boolean }) {
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" data-editor-field={name}>
       <span className="font-medium">{label}</span>
       <Controller
         name={name}
@@ -35,7 +35,7 @@ export function TextArea<T extends FieldValues>({ label, name, control, rows = 3
 
 export function Num<T extends FieldValues>({ label, name, control, min = 0, max = 100, step = 1 }: { label: string; name: Path<T>; control: Control<T>; min?: number; max?: number; step?: number }) {
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" data-editor-field={name}>
       <span className="font-medium">{label}</span>
       <Controller
         name={name}
@@ -50,7 +50,7 @@ export function Num<T extends FieldValues>({ label, name, control, min = 0, max 
 
 export function Color<T extends FieldValues>({ label, name, control }: { label: string; name: Path<T>; control: Control<T> }) {
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" data-editor-field={name}>
       <span className="font-medium">{label}</span>
       <Controller
         name={name}
@@ -68,7 +68,7 @@ export function Color<T extends FieldValues>({ label, name, control }: { label: 
 
 export function Toggle<T extends FieldValues>({ label, name, control }: { label: string; name: Path<T>; control: Control<T> }) {
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className="flex items-center gap-2 text-sm" data-editor-field={name}>
       <Controller
         name={name}
         control={control}
@@ -83,7 +83,7 @@ export function Toggle<T extends FieldValues>({ label, name, control }: { label:
 
 export function Select<T extends FieldValues>({ label, name, control, options }: { label: string; name: Path<T>; control: Control<T>; options: { value: string; label: string }[] }) {
   return (
-    <label className="block text-sm">
+    <label className="block text-sm" data-editor-field={name}>
       <span className="font-medium">{label}</span>
       <Controller
         name={name}
@@ -103,7 +103,7 @@ export function Select<T extends FieldValues>({ label, name, control, options }:
 export function ImageField<T extends FieldValues>({ label, name, control, siteId }: { label: string; name: Path<T>; control: Control<T>; siteId: number }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
-    <div className="text-sm">
+    <div className="text-sm" data-editor-field={name}>
       <span className="font-medium">{label}</span>
       <Controller
         name={name}
@@ -116,7 +116,7 @@ export function ImageField<T extends FieldValues>({ label, name, control, siteId
               <span className="flex h-12 w-24 items-center justify-center rounded border border-dashed text-xs text-slate-400">none</span>
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={() => setPickerOpen(true)} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Choose…</button>
+              <button type="button" aria-label={`Choose ${label}`} onClick={() => setPickerOpen(true)} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Choose…</button>
               {field.value && (
                 <button type="button" onClick={() => field.onChange("")} className="rounded border px-2 py-1 text-xs dark:border-slate-600">Clear</button>
               )}
@@ -142,7 +142,7 @@ export function ImageField<T extends FieldValues>({ label, name, control, siteId
 export function LinkList<T extends FieldValues>({ label, name, control }: { label: string; name: Path<T>; control: Control<T> }) {
   const { fields, append, remove, move } = useFieldArray({ control, name: name as never });
   return (
-    <div className="text-sm">
+    <div className="text-sm" data-editor-field={name}>
       <span className="font-medium">{label}</span>
       <ul className="mt-1 space-y-2">
         {fields.map((f, i) => (

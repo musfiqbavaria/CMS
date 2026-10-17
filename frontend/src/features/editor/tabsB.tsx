@@ -17,7 +17,7 @@ export function HeroTab({ control, siteId }: { control: C; siteId: number }) {
         <Select label="Alignment" name="hero.alignment" control={control} options={[{ value: "left", label: "Left" }, { value: "center", label: "Center" }, { value: "right", label: "Right" }]} />
         <Num label="Overlay opacity (0–1)" name="hero.overlay_opacity" control={control} min={0} max={1} step={0.05} />
       </div>
-      <div className="text-sm">
+      <div className="text-sm" data-editor-field="hero.buttons">
         <span className="font-medium">Buttons</span>
         <ul className="mt-1 space-y-2">
           {fields.map((f, i) => (

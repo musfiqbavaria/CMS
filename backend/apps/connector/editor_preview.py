@@ -1,0 +1,64 @@
+"""Read-only, opaque-origin inspection of a verified site's public layout."""
+
+import json
+import secrets
+
+from django.utils.html import format_html
+
+from .models import DEFAULT_SELECTORS
+
+
+def inspector_tag(request, site, channel, nonce):
+    mappings = list(site.mappings.all())
+    targets = (
+        [
+            {
+                "key": mapping.key,
+                "label": mapping.get_key_display(),
+                "selector": mapping.selector,
+            }
+            for mapping in mappings
+            if mapping.enabled
+        ]
+        if mappings
+        else [
+            {"key": key, "label": key.label, "selector": selector}
+            for key, selector in DEFAULT_SELECTORS.items()
+        ]
+    )
+    config = {
+        "channel": channel,
+        "parentOrigin": request.build_absolute_uri("/").rstrip("/"),
+        "targets": targets,
+    }
+    return format_html(
+        '<script nonce="{}" src="{}" data-cms-editor-config="{}"></script>',
+        nonce,
+        request.build_absolute_uri("/connector/v1/editor-bridge.js"),
+        json.dumps(config),
+    )
+
+
+def preview_policy(request, site, nonce):
+    origin = request.build_absolute_uri("/").rstrip("/")
+    return "; ".join(
+        [
+            "default-src 'none'",
+            f"script-src 'nonce-{nonce}'",
+            f"style-src 'unsafe-inline' https: {origin}",
+            f"img-src https: data: blob: {origin}",
+            f"font-src https: data: {origin}",
+            f"media-src https: blob: {origin}",
+            f"base-uri https://{site.domain}",
+            "connect-src 'none'",
+            "frame-src 'none'",
+            "object-src 'none'",
+            "form-action 'none'",
+            "frame-ancestors 'self'",
+            "sandbox allow-scripts",
+        ]
+    )
+
+
+def preview_nonce():
+    return secrets.token_urlsafe(24)

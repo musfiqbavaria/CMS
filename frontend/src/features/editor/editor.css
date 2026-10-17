@@ -51,6 +51,13 @@
 .site-editor-preview.ui-card { overflow: hidden; padding: 0; }
 .site-editor-preview-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; }
 .site-editor-preview-heading .ui-eyebrow { margin-bottom: 3px; font-size: 9px; }
+.site-editor-inspect-toggle.ui-button { min-height: 34px; font-size: 11px; padding: 7px 10px; }
+.site-editor-inspector-status { display: flex; align-items: flex-start; gap: 9px; padding: 12px 18px; border-top: 1px solid var(--line); background: var(--accent-soft); color: var(--accent); font-size: 11px; line-height: 1.7; }
+.site-editor-inspector-status > svg { flex-shrink: 0; margin-top: 2px; }
+.site-editor-inspector-status[data-warning="true"] { background: rgb(245 158 11 / .08); color: #b45309; }
+.dark .site-editor-inspector-status[data-warning="true"] { color: #fcd34d; }
+#editor-section-content:focus { outline: none; }
+#editor-section-content [data-editor-field] :where(input, textarea, select, button):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .site-editor-browser-bar { display: flex; min-width: 0; align-items: center; gap: 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 16px; background: var(--surface-soft); color: var(--muted); font-size: 10px; }
 .site-editor-browser-dots { display: flex; gap: 4px; }
 .site-editor-browser-dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--line); }

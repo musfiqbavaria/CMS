@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from django.http import HttpResponse, JsonResponse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from drf_spectacular.utils import OpenApiTypes, extend_schema
@@ -20,6 +21,7 @@ from . import services
 from .models import SelectorMapping
 
 LOADER_JS = Path(__file__).resolve().parent / "static" / "connector" / "loader.js"
+EDITOR_BRIDGE_JS = LOADER_JS.with_name("editor-bridge.js")
 
 # Framing blockers some origins send (Django's XFrameOptionsMiddleware emits
 # X-Frame-Options: DENY by default). Removed for editor previews only.
@@ -40,6 +42,19 @@ def cors(response):
 @require_GET
 def connector_ping(request):
     return cors(JsonResponse({"status": "ok", "service": "connector"}))
+
+
+@require_GET
+def editor_bridge_js(request):
+    try:
+        body = EDITOR_BRIDGE_JS.read_bytes()
+    except OSError:
+        return HttpResponse(
+            "Preview inspector unavailable.", status=503, content_type="text/plain"
+        )
+    response = HttpResponse(body, content_type="application/javascript")
+    response["Cache-Control"] = "public, max-age=0, must-revalidate"
+    return response
 
 
 @csrf_exempt
@@ -217,14 +232,13 @@ def proxy_page(request, site_key: str):
 
 @csrf_exempt
 @require_GET
+@xframe_options_sameorigin
 def preview_page(request, site_key: str):
     """Editor preview of a verified connected site, served through the CMS.
 
-    Same-origin HTML with a <base> fix and framing blockers removed, so
-    origins sending X-Frame-Options / CSP frame-ancestors still render
-    inside the editor. Unlike proxy_page there is no loader injection:
-    this is the pure original site. Gated by verification + the unguessable
-    site_key, like the other connector endpoints.
+    Public layout only: origin scripts, forms, frames and API calls are blocked.
+    CSP enforces an opaque sandbox, including when opened outside an iframe.
+    The optional inspector can select settings, never write content or publish.
     """
     site = Site.objects.filter(site_key=site_key).first()
     if site is None:
@@ -242,6 +256,11 @@ def preview_page(request, site_key: str):
             HttpResponse(
                 "Site ownership is not verified.", status=403, content_type="text/plain"
             )
+        )
+    channel = request.GET.get("edit_channel", "")
+    if channel and not re.fullmatch(r"[a-zA-Z0-9_-]{16,128}", channel):
+        return HttpResponse(
+            "Invalid preview channel.", status=400, content_type="text/plain"
         )
     path = request.GET.get("path", "/")
     if not path.startswith("/") or "://" in path:
@@ -269,14 +288,23 @@ def preview_page(request, site_key: str):
                 "Upstream did not return HTML.", status=502, content_type="text/plain"
             )
         )
+    from .editor_preview import inspector_tag, preview_nonce, preview_policy
+
     html = FRAME_BLOCK_META_RE.sub("", html)
+    html = re.sub(
+        r'<meta\b[^>]*http-equiv\s*=\s*["\']?refresh\b[^>]*>', "", html, flags=re.I
+    )
     lower = html.lower()
     head_idx = lower.find("<head")
     head_end = html.find(">", head_idx) + 1
     base_tag = f'<base href="https://{site.domain}/">'
-    html = html[:head_end] + base_tag + html[head_end:]
+    nonce = preview_nonce()
+    inspector = str(inspector_tag(request, site, channel, nonce)) if channel else ""
+    html = html[:head_end] + base_tag + inspector + html[head_end:]
     resp = HttpResponse(html, content_type="text/html")
     resp["Cache-Control"] = "no-store"
+    resp["Content-Security-Policy"] = preview_policy(request, site, nonce)
+    resp["Referrer-Policy"] = "no-referrer"
     return cors(resp)
 
 
