@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, ArrowRight, ChevronRight, Code2, Globe2, Image, LayoutTemplate,
   Menu, Monitor, MousePointer2, Paintbrush, PanelBottom, PanelTop, Search, Settings2,
-  Share2, Smartphone, Sparkles, Tablet, type LucideIcon,
+  Share2, Smartphone, Sparkles, Tablet, Trash2, type LucideIcon,
 } from "lucide-react";
 import { Card } from "../../../shared/ui/kit";
-import { EDITOR_TABS, type EditorTabKey } from "../types";
-import { editableDraft, editorMessage, EDIT_TARGETS, isCmsPreview, liveEditUrl, type EditTargetKey } from "../clickToEdit";
+import { EDITOR_TABS, type EditorTabKey, type PageBlock } from "../types";
+import { editableDraft, editorMessage, EDIT_TARGETS, isCmsPreview, isEditTarget, isPageBlockKey, liveEditUrl, newPageBlockId, type EditTargetKey, type PageBlockSuggestion } from "../clickToEdit";
 
 export const SECTION_DETAILS: Record<EditorTabKey, { icon: LucideIcon; description: string }> = {
   general: { icon: Globe2, description: "Give your website a name and a short introduction." },
@@ -78,12 +78,16 @@ const DEVICES = [
   { key: "mobile", label: "Mobile", icon: Smartphone, width: 390, height: 844 },
 ] as const;
 
-export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: {
+export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey, blocks = [], onBlockCreate, onBlockUpdate, onBlockRemove }: {
   html: string;
   liveUrl: string | null;
   onEdit: () => void;
   onSelect?: (key: EditTargetKey) => void;
   selectedKey?: EditTargetKey | null;
+  blocks?: PageBlock[];
+  onBlockCreate?: (block: PageBlock) => void | Promise<unknown>;
+  onBlockUpdate?: (id: string, text: string) => void;
+  onBlockRemove?: (id: string) => void;
 }) {
   const [device, setDevice] = useState<(typeof DEVICES)[number]["key"]>("desktop");
   const [source, setSource] = useState<"draft" | "live">("draft");
@@ -94,6 +98,11 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
   const [editMode, setEditMode] = useState(true);
   const [connection, setConnection] = useState<{ channel: string; count: number | null; slow: boolean }>({ channel: "", count: null, slow: false });
   const [unmapped, setUnmapped] = useState(false);
+  const [suggestion, setSuggestion] = useState<PageBlockSuggestion | null>(null);
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [reloadSerial, setReloadSerial] = useState(0);
+  const [previewPath, setPreviewPath] = useState("/");
+  const [reloadPath, setReloadPath] = useState("/");
   const selected = DEVICES.find((item) => item.key === device)!;
   const scale = availableWidth > 0 ? Math.min(1, availableWidth / selected.width) : 1;
   const showingLive = source === "live" && liveUrl !== null;
@@ -101,18 +110,30 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
   const documentKey = showingLive ? liveUrl : html;
   const channel = useMemo(() => Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, "0")).join(""), [documentKey, source]);
   const draftHtml = useMemo(() => editable ? editableDraft(html, channel) : html, [editable, html, channel]);
-  const liveSrc = showingLive && editable ? liveEditUrl(liveUrl, channel) : liveUrl;
+  // The frame keeps browsing on its own; remember its page and re-enter it when
+  // the preview is deliberately reloaded (a page text area needs a fresh config).
+  const liveSrc = useMemo(() => {
+    if (!showingLive || !editable || !liveUrl) return liveUrl;
+    const src = liveEditUrl(liveUrl, channel);
+    if (!reloadPath || reloadPath === "/") return src;
+    try {
+      const parsed = new URL(src);
+      parsed.searchParams.set("path", reloadPath);
+      return parsed.href;
+    } catch { return src; }
+  }, [channel, editable, liveUrl, reloadPath, showingLive]);
   const connected = connection.channel === channel && connection.count !== null;
   const waiting = connection.channel === channel && connection.slow;
   const editableAreas = connected && connection.count !== null ? `${connection.count} editable area${connection.count === 1 ? "" : "s"} on this page` : null;
   const scrollSource = showingLive ? "live" : "draft";
+  const activeBlock = selectedBlockId ? blocks.find((block) => block.id === selectedBlockId) ?? null : null;
 
   const configure = useCallback(() => {
     iframe.current?.contentWindow?.postMessage({
       type: "cms:editor:configure", channel, enabled: editMode,
-      key: selectedKey ?? null, y: scrollMemory.current[scrollSource],
+      key: selectedKey ?? selectedBlockId ?? null, y: scrollMemory.current[scrollSource],
     }, "*"); // The sandbox has an opaque origin; the recipient validates source, origin and channel.
-  }, [channel, editMode, selectedKey, scrollSource]);
+  }, [channel, editMode, scrollSource, selectedBlockId, selectedKey]);
 
   useEffect(() => {
     if (!editable) return;
@@ -121,14 +142,22 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
       if (!message) return;
       if (message.type === "ready") {
         setConnection({ channel, count: message.count, slow: false });
+        setPreviewPath(message.path);
         configure();
       } else if (message.type === "scroll") {
         scrollMemory.current[scrollSource] = message.y;
       } else if (message.type === "select" && editMode) {
         setUnmapped(false);
-        onSelect?.(message.key);
+        setSuggestion(null);
+        if (isEditTarget(message.key)) {
+          setSelectedBlockId(null);
+          onSelect?.(message.key);
+        } else if (isPageBlockKey(message.key)) {
+          setSelectedBlockId(message.key);
+        }
       } else if (message.type === "unmapped" && editMode) {
         setUnmapped(true);
+        setSuggestion(message.suggestion);
       }
     }
     window.addEventListener("message", receive);
@@ -150,6 +179,28 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, []);
+
+  // Turn the clicked area into a page text block, then reload the preview so
+  // the inspector knows it and clicking it again opens the text editor.
+  function adoptSuggestion() {
+    if (!showingLive || !suggestion || !onBlockCreate) return;
+    const existing = blocks.find((block) => block.path === suggestion.path && block.selector === suggestion.selector);
+    if (existing) {
+      setSelectedBlockId(existing.id);
+    } else {
+      const block: PageBlock = { id: newPageBlockId(), path: suggestion.path, label: suggestion.label, selector: suggestion.selector, text: "" };
+      setSelectedBlockId(block.id);
+      setReloadPath(previewPath);
+      // Save first; the inspector config is built from the saved draft.
+      Promise.resolve()
+        .then(() => onBlockCreate(block))
+        .catch(() => undefined)
+        .finally(() => setReloadSerial((serial) => serial + 1));
+    }
+    setUnmapped(false);
+    setSuggestion(null);
+  }
+  const canAdopt = showingLive && unmapped && editMode && !!suggestion && !!onBlockCreate;
 
   return (
     <Card className="site-editor-preview">
@@ -178,16 +229,37 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
       </div>
       {onSelect && <div className="site-editor-inspector-status" role="status" aria-live="polite" data-warning={unmapped || waiting || (connected && connection.count === 0)}>
         <MousePointer2 size={14} aria-hidden="true" />
-        <p>{!editable ? "Use Draft design or a verified CMS website preview for click-to-edit." : !editMode ? (showingLive ? `Selection is off.${editableAreas ? ` ${editableAreas} — turn Click to edit on to select them.` : ""} Links browse the live pages here; forms and scripts stay disabled.` : "Selection is off. Preview links and forms remain disabled.") : waiting ? "The inspector has not connected. Try Draft design or check your preview connection." : !connected ? "Connecting the preview inspector…" : connection.count === 0 ? "No mapped areas found. Review selector mappings or use Draft design." : unmapped ? "This area is not mapped. Choose a section from the editor or update its selector mapping." : selectedKey ? <><strong>{EDIT_TARGETS[selectedKey].label}</strong> selected. Edit its settings in the panel.</> : `${editableAreas ? `${editableAreas}. ` : ""}Hover or tab to one, then click or press Enter to edit its settings. Ctrl/⌘+click a link to browse the site.`}</p>
+        <p>{!editable ? "Use Draft design or a verified CMS website preview for click-to-edit." : !editMode ? (showingLive ? `Selection is off.${editableAreas ? ` ${editableAreas} — turn Click to edit on to select them.` : ""} Links browse the live pages here; forms and scripts stay disabled.` : "Selection is off. Preview links and forms remain disabled.") : waiting ? "The inspector has not connected. Try Draft design or check your preview connection." : !connected ? "Connecting the preview inspector…" : connection.count === 0 ? "No mapped areas found. Review selector mappings or use Draft design." : unmapped ? (canAdopt ? "This area is not editable yet. Make it a text area for this page to edit its text here." : "This area is not mapped. Choose a section from the editor or update its selector mapping.") : selectedKey ? <><strong>{EDIT_TARGETS[selectedKey].label}</strong> selected. Edit its settings in the panel.</> : `${editableAreas ? `${editableAreas}. ` : ""}Hover or tab to one, then click or press Enter to edit its settings. Ctrl/⌘+click a link to browse the site.`}</p>
+        {canAdopt && <button type="button" className="ui-button site-editor-adopt" data-variant="secondary" onClick={adoptSuggestion}>Make this text editable</button>}
       </div>}
+      {showingLive && activeBlock && onBlockUpdate && (
+        <div className="site-editor-pageblock" role="group" aria-label={`Page text on ${activeBlock.path}`}>
+          <div className="site-editor-pageblock-copy">
+            <strong>{activeBlock.label || "Page text"}</strong>
+            <span>Shown only on {activeBlock.path} · autosaves with your draft</span>
+          </div>
+          <input
+            autoFocus
+            aria-label="Page text"
+            value={activeBlock.text}
+            placeholder={activeBlock.label || "Text shown on this page"}
+            onChange={(event) => onBlockUpdate(activeBlock.id, event.target.value)}
+          />
+          {onBlockRemove && (
+            <button type="button" className="site-editor-pageblock-remove" aria-label="Remove this page text" title="Remove page text" onClick={() => { onBlockRemove(activeBlock.id); setSelectedBlockId(null); }}>
+              <Trash2 size={15} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+      )}
       <div className="site-editor-browser-bar"><span aria-hidden="true" className="site-editor-browser-dots"><i /><i /><i /></span><span>{showingLive ? liveUrl : "Template canvas"}</span><span className="ml-auto">{selected.width} px</span></div>
       <div className="site-editor-preview-stage">
         <div ref={viewport} className="site-editor-preview-viewport">
           <div className="site-editor-preview-frame" style={{ width: selected.width * scale, height: selected.height * scale }}>
             {showingLive ? (
-              <iframe ref={iframe} title="Live website preview" src={liveSrc!} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+              <iframe key={`live-${reloadSerial}`} ref={iframe} title="Live website preview" src={liveSrc!} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
             ) : (
-              <iframe ref={iframe} title="Draft preview" srcDoc={draftHtml} sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+              <iframe key="draft" ref={iframe} title="Draft preview" srcDoc={draftHtml} sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
             )}
           </div>
         </div>

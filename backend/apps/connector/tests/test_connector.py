@@ -87,6 +87,38 @@ def test_verified_site_receives_custom_js(client, site):
     assert body["data"]["custom_js"] == "console.log(1)"
 
 
+def test_published_page_text_blocks_ship_with_the_payload(client, site):
+    from apps.content.services import get_or_create_config, publish
+
+    cfg = get_or_create_config(site)
+    cfg.draft["pages"] = {
+        "blocks": [
+            {
+                "id": "b0123456789abcdef",
+                "path": "/jobs/",
+                "label": "Jobs banner heading",
+                "selector": "section.public-hero h1",
+                "text": "Find your next opportunity",
+            },
+            {"id": "not-a-block", "path": "/x", "selector": "h1", "text": "nope"},
+            {"id": "bffffffffff", "path": "relative", "selector": "h1", "text": "nope"},
+            {"id": "b1111111111", "path": "/x", "selector": "", "text": "nope"},
+        ]
+    }
+    cfg.save()
+    publish(actor=None, site=site)
+    body = client.get(config_url(site)).json()
+    assert body["blocks"] == [
+        {
+            "id": "b0123456789abcdef",
+            "path": "/jobs",
+            "label": "Jobs banner heading",
+            "selector": "section.public-hero h1",
+            "text": "Find your next opportunity",
+        }
+    ]
+
+
 def test_publish_purges_cache(admin_client, site):
     from django.core.cache import cache
 
@@ -128,6 +160,8 @@ def test_loader_js(client, db):
     assert "javascript" in resp["Content-Type"]
     assert resp["Access-Control-Allow-Origin"] == "*"
     assert "data-cms-site" in resp.content.decode()
+    # Page text blocks apply only on their own page.
+    assert b"applyPageBlocks" in resp.content
     assert client.get("/connector/v1/loader.js").status_code == 400
 
 

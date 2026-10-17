@@ -2,7 +2,7 @@
 
 Living file: completed phases, key decisions, next steps.
 
-## Connected-site publish fixes (source implemented; runtime update pending)
+## Connected-site editing (done)
 
 - Publish uses the current working draft, not a stale saved version. Version
   allocation is serialized per site; rollback remains an explicit snapshot.
@@ -17,11 +17,20 @@ Living file: completed phases, key decisions, next steps.
   warnings clarify what is saved versus delivered publicly.
 - Added `CMS_PUBLIC_URL` (optional; blank while local) and documented deployment,
   DOM hooks, newsletter-provider and crawler/CSP boundaries.
-- Verified locally: 20 Django regression tests against an isolated in-memory
-  database, 13 loader logic tests with a DOM double, 2 proxy config tests, and
-  migration/model consistency. Full frontend/browser/container verification
-  and rebuilding running services remain pending because command approval was
-  blocked by the approval service's usage limit. No public deployment was made.
+- Page-scoped content: click any unmapped element in the live preview to turn it
+  into a "page text area" (`pages.blocks` in the site config). Each area stores
+  its own site path (e.g. `/jobs`), selector, label and text, and only applies on
+  that page. Suggestions come from the editor bridge (unique tag/class selector,
+  trimmed label, current preview path), persist before the preview reloads, and
+  ride the normal draft/publish lifecycle. Page areas are editable in an inline
+  strip in the preview and listed under Advanced → "Page text areas".
+- Delivery: the connector payload ships `blocks`; the loader applies matching-path
+  areas after the mappings (page areas override mapping text), skips empty text,
+  and reports unmatched areas only on their own path (`page:<label>` keys).
+- Verified in containers: backend 175 pytest + frontend 74 vitest, editor E2E on
+  the connected ERP site (create → persist → reselect → remove), and a loader
+  fixture E2E proving path-scoped apply/report. Prod compose rebuilt and
+  `/api/health/` 200.
 
 ## Completed
 

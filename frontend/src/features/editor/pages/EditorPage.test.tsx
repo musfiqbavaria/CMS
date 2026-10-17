@@ -108,4 +108,20 @@ describe("connected website editor workspace", () => {
     expect(await screen.findByText(/Published v4\. Reload the connected website/)).toHaveTextContent("Your CMS is local");
     expect(screen.getByLabelText("Site name")).toHaveValue("Acme Studio");
   });
+
+  it("persists removing a page text area even though the form returns to its loaded values", async () => {
+    config = {
+      ...config,
+      draft: {
+        ...structuredClone(draft),
+        pages: { blocks: [{ id: "b0123456789abcdef", path: "/jobs", label: "Jobs heading", selector: "h1.display-6", text: "Find your next opportunity" }] },
+      },
+    };
+    await renderEditor();
+    fireEvent.change(screen.getByLabelText("Choose an editor section"), { target: { value: "advanced" } });
+    expect(screen.getByText("Jobs heading")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith("/v1/sites/1/config/", expect.objectContaining({ pages: { blocks: [] } })));
+    expect(screen.queryByText("Jobs heading")).not.toBeInTheDocument();
+  });
 });

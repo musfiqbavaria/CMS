@@ -12,6 +12,15 @@ export interface FooterColumn {
   links: LinkItem[];
 }
 
+/** A text area the user added for one specific page of a connected website. */
+export interface PageBlock {
+  id: string;
+  path: string;
+  label: string;
+  selector: string;
+  text: string;
+}
+
 export interface SiteConfigDraft {
   _overrides?: string[];
   general: { site_name: string; tagline: string };
@@ -36,6 +45,7 @@ export interface SiteConfigDraft {
   seo: { title: string; description: string; keywords: string; og_image: string };
   custom: { css: string; js: string };
   social: { facebook: string; x: string; instagram: string; linkedin: string; youtube: string };
+  pages?: { blocks?: PageBlock[] };
 }
 
 export interface ConfigVersion {

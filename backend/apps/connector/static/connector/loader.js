@@ -325,6 +325,30 @@
     }
   }
 
+  function pagePath(value) {
+    var path = String(value || "/").split("?")[0].split("#")[0];
+    if (path.charAt(0) !== "/") path = "/" + path;
+    path = path.replace(/\/+$/, "");
+    return path || "/";
+  }
+
+  function applyPageBlocks(blocks) {
+    if (!Array.isArray(blocks) || !blocks.length) return;
+    var current = pagePath(window.location.pathname);
+    blocks.forEach(function (block) {
+      if (!block || typeof block.selector !== "string" || !block.selector) return;
+      if (pagePath(block.path) !== current) return;
+      var label = "page:" + (block.label || block.id || "text");
+      try {
+        var el = document.querySelector(block.selector);
+        if (!el) { status.unmatched.push({ key: label, selector: block.selector }); return; }
+        if (typeof block.text !== "string" || block.text === "") return;
+        text(el, block.text);
+        status.applied.push(label);
+      } catch (error) { status.errors.push({ key: label, message: error.message }); }
+    });
+  }
+
   function applyConfig(cfg) {
     if (!cfg || !cfg.data) throw new Error("Published configuration is missing data");
     var data = cfg.data;
@@ -338,6 +362,7 @@
         if (result === false) status.unmatched.push({ key: mapping.key, selector: mapping.selector });
       } catch (error) { status.errors.push({ key: mapping.key, message: error.message }); }
     });
+    applyPageBlocks(cfg.blocks);
     if (cfg.verified && (data.custom_css || changed(data, "custom.css"))) styleTag("custom", data.custom_css || "");
     if (cfg.verified && data.custom_js && !document.querySelector("script[data-cms-custom]")) {
       var script = document.createElement("script"); script.setAttribute("data-cms-custom", "true");

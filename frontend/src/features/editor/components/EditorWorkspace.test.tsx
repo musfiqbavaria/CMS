@@ -135,4 +135,60 @@ describe("EditorPreview", () => {
     render(<EditorPreview html="<h1>My draft</h1>" liveUrl={null} onEdit={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "Live website" })).not.toBeInTheDocument();
   });
+
+  it("edits page text blocks selected in the live preview and removes them from the page", () => {
+    const onSelect = vi.fn();
+    const onBlockUpdate = vi.fn();
+    const onBlockRemove = vi.fn();
+    const block = { id: "b0123456789abcdef", path: "/jobs", label: "Jobs banner heading", selector: "section.public-hero h1", text: "Find Your Next Opportunity at Bavaria" };
+    render(<EditorPreview html="<h1>My draft</h1>" liveUrl="/connector/v1/preview/testsite/" onSelect={onSelect} onEdit={vi.fn()} blocks={[block]} onBlockUpdate={onBlockUpdate} onBlockRemove={onBlockRemove} />);
+    fireEvent.click(screen.getByRole("button", { name: "Live website" }));
+    const frame = screen.getByTitle("Live website preview") as HTMLIFrameElement;
+    const channel = new URL(frame.getAttribute("src")!, window.location.origin).searchParams.get("edit_channel");
+    fireEvent(window, new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: "cms:editor:select", channel, key: block.id } }));
+    expect(onSelect).not.toHaveBeenCalled();
+    const input = screen.getByLabelText("Page text");
+    expect(input).toHaveValue("Find Your Next Opportunity at Bavaria");
+    expect(screen.getByText(/Shown only on \/jobs/)).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "Join the team" } });
+    expect(onBlockUpdate).toHaveBeenCalledWith(block.id, "Join the team");
+    fireEvent.click(screen.getByRole("button", { name: "Remove this page text" }));
+    expect(onBlockRemove).toHaveBeenCalledWith(block.id);
+    expect(screen.queryByLabelText("Page text")).not.toBeInTheDocument();
+  });
+
+  it("offers to make unmapped text editable on its page and creates a page text block", async () => {
+    const onBlockCreate = vi.fn();
+    const props = { html: "<h1>My draft</h1>", liveUrl: "/connector/v1/preview/testsite/", onSelect: vi.fn(), onEdit: vi.fn(), onBlockCreate, onBlockUpdate: vi.fn(), onBlockRemove: vi.fn() };
+    const { rerender } = render(<EditorPreview {...props} blocks={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Live website" }));
+    const frame = screen.getByTitle("Live website preview") as HTMLIFrameElement;
+    const channel = new URL(frame.getAttribute("src")!, window.location.origin).searchParams.get("edit_channel");
+    fireEvent(window, new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: "cms:editor:ready", channel, count: 4, path: "/jobs" } }));
+    fireEvent(window, new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: "cms:editor:unmapped", channel, path: "/jobs", selector: "section.public-hero h1", label: "Find Your Next Opportunity at Bavaria" } }));
+    expect(screen.getByText(/This area is not editable yet/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Make this text editable" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onBlockCreate).toHaveBeenCalledOnce();
+    const created = onBlockCreate.mock.calls[0][0] as { id: string; path: string; selector: string; label: string; text: string };
+    expect(created).toMatchObject({ path: "/jobs", selector: "section.public-hero h1", label: "Find Your Next Opportunity at Bavaria", text: "" });
+    expect(created.id).toMatch(/^b[0-9a-f]{16}$/);
+    // The reload keeps the browsed page so the writing context never jumps to the home page.
+    const reloaded = screen.getByTitle("Live website preview") as HTMLIFrameElement;
+    expect(reloaded.getAttribute("src")).toContain("path=%2Fjobs");
+    rerender(<EditorPreview {...props} blocks={[created]} />);
+    expect(screen.getByLabelText("Page text")).toHaveValue("");
+    expect(screen.queryByText(/This area is not editable yet/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the plain guidance when the clicked area cannot become a page text", () => {
+    render(<EditorPreview html="<h1>My draft</h1>" liveUrl="/connector/v1/preview/testsite/" onSelect={vi.fn()} onEdit={vi.fn()} onBlockCreate={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Live website" }));
+    const frame = screen.getByTitle("Live website preview") as HTMLIFrameElement;
+    const channel = new URL(frame.getAttribute("src")!, window.location.origin).searchParams.get("edit_channel");
+    fireEvent(window, new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: "cms:editor:ready", channel, count: 4 } }));
+    fireEvent(window, new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: "cms:editor:unmapped", channel } }));
+    expect(screen.getByText(/This area is not mapped/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Make this text editable" })).not.toBeInTheDocument();
+  });
 });

@@ -79,6 +79,8 @@ def build_payload(site) -> dict:
 
     pub = site.config.published if hasattr(site, "config") else {}
     pub = pub or {}
+    from apps.content.services import sanitize_page_blocks
+
     header = pub.get("header", {})
     hero = pub.get("hero", {})
     footer = pub.get("footer", {})
@@ -137,6 +139,7 @@ def build_payload(site) -> dict:
         for m in sorted(site.mappings.all(), key=lambda item: item.key)
         if m.enabled
     ]
+    blocks = sanitize_page_blocks((pub.get("pages") or {}).get("blocks"))
     payload = {
         "site_key": site.site_key,
         "domain": site.domain,
@@ -149,6 +152,7 @@ def build_payload(site) -> dict:
         ),
         "data": data,
         "mappings": mappings,
+        "blocks": blocks,
     }
     payload["delivery_revision"] = etag_for(payload).strip('"')
     return payload

@@ -1,6 +1,7 @@
 """Site editor business logic: drafts, versions, publish/rollback, media."""
 
 import copy
+import re
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -16,6 +17,49 @@ from apps.sites.models import Site
 from .models import ConfigVersion, SiteConfig
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "gif"}
+
+PAGE_BLOCK_ID = re.compile(r"^b[0-9a-f]{8,24}$")
+PAGE_BLOCK_MAX = 100
+
+
+def normalize_page_path(value) -> str:
+    """Page paths are compared without query, fragment or trailing slash."""
+    path = str(value or "/").split("?")[0].split("#")[0].strip()
+    if not path.startswith("/"):
+        path = "/" + path
+    path = path.rstrip("/")
+    return path or "/"
+
+
+def sanitize_page_blocks(raw) -> list[dict]:
+    """Keep only well-formed per-page text blocks from a config snapshot."""
+    blocks = []
+    if not isinstance(raw, list):
+        return blocks
+    for item in raw[:PAGE_BLOCK_MAX]:
+        if not isinstance(item, dict):
+            continue
+        block_id = item.get("id")
+        selector = item.get("selector")
+        path = item.get("path")
+        if not isinstance(block_id, str) or not PAGE_BLOCK_ID.match(block_id):
+            continue
+        if not isinstance(selector, str) or not selector.strip() or len(selector) > 255:
+            continue
+        if not isinstance(path, str) or not path.startswith("/") or len(path) > 255:
+            continue
+        text = item.get("text")
+        label = item.get("label")
+        blocks.append(
+            {
+                "id": block_id,
+                "path": normalize_page_path(path),
+                "selector": selector.strip(),
+                "label": label.strip()[:80] if isinstance(label, str) else "",
+                "text": text[:2000] if isinstance(text, str) else "",
+            }
+        )
+    return blocks
 
 
 def default_config(site) -> dict:
@@ -78,6 +122,7 @@ def default_config(site) -> dict:
             "linkedin": "",
             "youtube": "",
         },
+        "pages": {"blocks": []},
     }
 
 

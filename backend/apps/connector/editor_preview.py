@@ -5,12 +5,14 @@ import secrets
 
 from django.utils.html import format_html
 
+from apps.content.services import sanitize_page_blocks
+
 from .models import DEFAULT_SELECTORS
 
 
 def inspector_tag(request, site, channel, nonce):
     mappings = list(site.mappings.all())
-    targets = (
+    mapping_targets = (
         [
             {
                 "key": mapping.key,
@@ -26,10 +28,23 @@ def inspector_tag(request, site, channel, nonce):
             for key, selector in DEFAULT_SELECTORS.items()
         ]
     )
+    config_row = getattr(site, "config", None)
+    draft = (config_row.draft if config_row else None) or {}
+    # Page text blocks come first: they are page-scoped and override the
+    # site-wide mappings on the pages where both target the same element.
+    block_targets = [
+        {
+            "key": block["id"],
+            "label": block["label"] or "Page text",
+            "selector": block["selector"],
+            "path": block["path"],
+        }
+        for block in sanitize_page_blocks((draft.get("pages") or {}).get("blocks"))
+    ]
     config = {
         "channel": channel,
         "parentOrigin": request.build_absolute_uri("/").rstrip("/"),
-        "targets": targets,
+        "targets": block_targets + mapping_targets,
     }
     return format_html(
         '<script nonce="{}" src="{}" data-cms-editor-config="{}"></script>',

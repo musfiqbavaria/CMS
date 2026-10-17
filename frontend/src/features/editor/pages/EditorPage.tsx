@@ -5,7 +5,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, CheckCircle2, CircleAlert, Globe2,
 import { usePatchDraft, usePublish, useSaveDraft, useEditorConfig } from "../api";
 import { ResetDraftButton, UnsavedGuard, VersionsPanel } from "../components/VersionControls";
 import { configToHtml, isDirty } from "../preview";
-import type { EditorTabKey, SiteConfigDraft } from "../types";
+import type { EditorTabKey, PageBlock, SiteConfigDraft } from "../types";
 import { useSite } from "../../sites/api";
 import { publicSiteUrl } from "../../sites/links";
 import { BrandingTab, CoverTab, FooterTab, GeneralTab, HeaderTab, SeoTab } from "../tabsA";
@@ -24,7 +24,7 @@ const editorViews = [
   { key: "preview", label: "Preview", icon: Monitor },
 ] as const;
 
-function TabBody({ tab, control, siteId, seededTitle }: { tab: EditorTabKey; control: Parameters<typeof GeneralTab>[0]["control"]; siteId: number; seededTitle?: string }) {
+function TabBody({ tab, control, siteId, seededTitle, blocks, onBlockRemove }: { tab: EditorTabKey; control: Parameters<typeof GeneralTab>[0]["control"]; siteId: number; seededTitle?: string; blocks: PageBlock[]; onBlockRemove: (id: string) => void }) {
   switch (tab) {
     case "general": return <GeneralTab control={control} seededTitle={seededTitle} />;
     case "header": return <HeaderTab control={control} siteId={siteId} />;
@@ -37,7 +37,7 @@ function TabBody({ tab, control, siteId, seededTitle }: { tab: EditorTabKey; con
     case "seo": return <SeoTab control={control} siteId={siteId} />;
     case "custom": return <CustomTab control={control} />;
     case "social": return <SocialTab control={control} />;
-    case "advanced": return <AdvancedTab control={control} siteId={siteId} />;
+    case "advanced": return <AdvancedTab control={control} siteId={siteId} blocks={blocks} onBlockRemove={onBlockRemove} />;
   }
 }
 
@@ -103,6 +103,27 @@ export default function EditorPage() {
   const values = useWatch({ control: form.control });
   const { isDirty: formDirty } = form.formState;
   const dirty = formDirty && !!config && isDirty(config.draft, values as SiteConfigDraft);
+  const pageBlocks = ((values as SiteConfigDraft | undefined)?.pages?.blocks ?? []) as PageBlock[];
+
+  function updatePageBlocks(next: PageBlock[]) {
+    form.setValue("pages.blocks", next, { shouldDirty: true, shouldTouch: true });
+  }
+
+  function addPageBlock(block: PageBlock) {
+    const next = [...pageBlocks, block];
+    updatePageBlocks(next);
+    // Persist before the preview reloads: the inspector config is built from
+    // the saved draft, so the new area must exist there.
+    return writeDraft({ pages: { blocks: next } }).catch(() => undefined);
+  }
+
+  function removePageBlock(id: string) {
+    const next = pageBlocks.filter((block) => block.id !== id);
+    updatePageBlocks(next);
+    // Persist immediately: removing the last block returns the form to its
+    // loaded values, where the autosave no longer sees unsaved changes.
+    return writeDraft({ pages: { blocks: next } }).catch(() => undefined);
+  }
 
   function writeDraft(snapshot: Partial<SiteConfigDraft>) {
     // Serialize draft writes so an older autosave cannot overtake Publish.
@@ -269,7 +290,7 @@ export default function EditorPage() {
                   </div>
                   <fieldset disabled={busy} className="site-editor-fields">
                     <legend className="sr-only">{sectionLabel(tab)} settings</legend>
-                    <TabBody tab={tab} control={form.control} siteId={siteId} seededTitle={String(site?.discovery?.title || site?.name || "")} />
+                    <TabBody tab={tab} control={form.control} siteId={siteId} seededTitle={String(site?.discovery?.title || site?.name || "")} blocks={pageBlocks} onBlockRemove={removePageBlock} />
                   </fieldset>
                   <div className="site-editor-form-footer">
                     <p>Changes stay in your draft until you publish.</p>
@@ -293,7 +314,20 @@ export default function EditorPage() {
             </div>
           </div>
         )}
-        {view !== "editor" && <EditorPreview key={siteId} html={previewHtml} liveUrl={liveUrl} selectedKey={previewSelection} onSelect={selectFromPreview} onEdit={() => setView("editor")} />}
+        {view !== "editor" && (
+          <EditorPreview
+            key={siteId}
+            html={previewHtml}
+            liveUrl={liveUrl}
+            selectedKey={previewSelection}
+            onSelect={selectFromPreview}
+            onEdit={() => setView("editor")}
+            blocks={pageBlocks}
+            onBlockCreate={addPageBlock}
+            onBlockUpdate={(id, text) => updatePageBlocks(pageBlocks.map((block) => (block.id === id ? { ...block, text } : block)))}
+            onBlockRemove={removePageBlock}
+          />
+        )}
       </div>
 
       <UnsavedGuard when={dirty} />

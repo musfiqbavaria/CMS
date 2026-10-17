@@ -48,11 +48,30 @@ describe("click-to-edit boundaries", () => {
   it("bounds scroll and readiness reports", () => {
     const frame = document.createElement("iframe"); document.body.append(frame);
     const parse = (type: string, fields: object) => editorMessage(new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: `cms:editor:${type}`, channel, ...fields } }), frame.contentWindow, channel);
-    expect(parse("ready", { count: 12 })).toEqual({ type: "ready", count: 12 });
+    expect(parse("ready", { count: 12 })).toEqual({ type: "ready", count: 12, path: "/" });
+    expect(parse("ready", { count: 12, path: "/jobs/" })).toEqual({ type: "ready", count: 12, path: "/jobs/" });
+    expect(parse("ready", { count: 12, path: "jobs" })).toEqual({ type: "ready", count: 12, path: "/" });
+    expect(parse("ready", { count: 12, path: 7 })).toEqual({ type: "ready", count: 12, path: "/" });
+    expect(parse("ready", { count: 12, path: "/connector/v1/preview/key/" })).toEqual({ type: "ready", count: 12, path: "/" });
     expect(parse("ready", { count: -1 })).toBeNull();
     expect(parse("scroll", { y: 200 })).toEqual({ type: "scroll", y: 200 });
     expect(parse("scroll", { y: Infinity })).toBeNull();
     expect(parse("scroll", { y: -1 })).toBeNull();
+    frame.remove();
+  });
+
+  it("accepts page text blocks and bounds their unmapped suggestions", () => {
+    const frame = document.createElement("iframe"); document.body.append(frame);
+    const event = (type: string, fields: object) => new MessageEvent("message", { source: frame.contentWindow, origin: "null", data: { type: `cms:editor:${type}`, channel, ...fields } });
+    const select = (key: unknown) => editorMessage(event("select", { key }), frame.contentWindow, channel);
+    expect(select("b0123456789abcdef")).toEqual({ type: "select", key: "b0123456789abcdef" });
+    for (const key of ["b0", "b0123456789abcdef0x", "bx1234567890abcdef", "page:1", ""]) expect(select(key)).toBeNull();
+    const unmapped = (fields: object) => editorMessage(event("unmapped", fields), frame.contentWindow, channel);
+    expect(unmapped({})).toEqual({ type: "unmapped", suggestion: null });
+    expect(unmapped({ path: "/jobs", selector: "section.public-hero h1", label: "Find  Your\nNext" })).toEqual({ type: "unmapped", suggestion: { path: "/jobs", selector: "section.public-hero h1", label: "Find Your Next" } });
+    for (const bad of [{ path: "jobs", selector: "h1" }, { path: "/jobs", selector: "" }, { path: "/jobs", selector: "x".repeat(256) }, { path: "/" + "a".repeat(201), selector: "h1" }]) {
+      expect(unmapped(bad)).toEqual({ type: "unmapped", suggestion: null });
+    }
     frame.remove();
   });
 });

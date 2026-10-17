@@ -121,6 +121,13 @@ uses the website's enabled selector mappings; missing or disabled mappings are
 not guessed. Unsupported content is not arbitrary inline HTML editing. Empty
 sections can still be added or edited using the section navigation.
 
+Unmapped elements can be turned into **page text areas**: click one and choose
+**Make this text editable** to create an area (`pages.blocks` — path, selector,
+label, text) that keeps the page's own text. The area autosaves with the draft,
+shows an inline editor strip while it is selected, and is listed under
+**Advanced → Page text areas**. Text is applied as plain text (no HTML). On the
+published website each area applies only on its own path, after the mappings.
+
 Original-site previews are read-only, opaque-origin sandboxes. Website scripts,
 forms, nested frames, and API calls are blocked; their static styles and images
 can render. Script-rendered content may therefore be absent. Only the CMS preview
@@ -138,7 +145,9 @@ the preview's nonce-based CSP instead of inheriting the admin SPA's CSP.
   `<base>` + loader tag into origin HTML).
 - `loader.js` reads its own `?site=` (or `data-cms-site`), fetches config, and
   applies header/logo/favicon/hero/footer/theme through admin-editable
-  `SelectorMapping` rows (`/websites/:id/mappings`, defaults seeded per site).
+  `SelectorMapping` rows (`/websites/:id/mappings`, defaults seeded per site)
+  plus path-scoped `pages.blocks` page text areas, which apply only on their own
+  page and override mapping text there.
 - Publish/rollback/mapping changes invalidate the connector cache directly after
   commit; delivery also checks the published-version and mapping revisions. A
   slow/unavailable Celery worker cannot leave an older configuration live.

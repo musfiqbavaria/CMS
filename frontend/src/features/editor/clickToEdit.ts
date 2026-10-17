@@ -29,6 +29,30 @@ export function isEditTarget(key: unknown): key is EditTargetKey {
   return typeof key === "string" && Object.prototype.hasOwnProperty.call(EDIT_TARGETS, key);
 }
 
+/** Per-page text areas use ids like "b1a2b3c4d5e6f708". */
+const PAGE_BLOCK_KEY = /^b[0-9a-f]{8,24}$/;
+
+export function isPageBlockKey(key: unknown): key is string {
+  return typeof key === "string" && PAGE_BLOCK_KEY.test(key);
+}
+
+export function newPageBlockId(): string {
+  return "b" + Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export interface PageBlockSuggestion {
+  path: string;
+  selector: string;
+  label: string;
+}
+
+function blockSuggestion(message: Record<string, unknown>): PageBlockSuggestion | null {
+  const { path, selector, label } = message;
+  if (typeof path !== "string" || !/^\/[^\s?#]{0,200}$/.test(path)) return null;
+  if (typeof selector !== "string" || selector.length === 0 || selector.length > 255) return null;
+  return { path, selector, label: typeof label === "string" ? label.replace(/\s+/g, " ").slice(0, 80) : "" };
+}
+
 export function isCmsPreview(url: string | null): boolean {
   if (!url) return false;
   try {
@@ -61,9 +85,12 @@ export function editorMessage(event: MessageEvent, frame: Window | null, channel
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const message = data as Record<string, unknown>;
   if (message.channel !== channel) return null;
-  if (message.type === "cms:editor:select" && isEditTarget(message.key)) return { type: "select" as const, key: message.key };
-  if (message.type === "cms:editor:ready" && Number.isInteger(message.count) && Number(message.count) >= 0 && Number(message.count) <= 10_000) return { type: "ready" as const, count: Number(message.count) };
-  if (message.type === "cms:editor:unmapped") return { type: "unmapped" as const };
+  if (message.type === "cms:editor:select" && (isEditTarget(message.key) || isPageBlockKey(message.key))) return { type: "select" as const, key: message.key };
+  if (message.type === "cms:editor:ready" && Number.isInteger(message.count) && Number(message.count) >= 0 && Number(message.count) <= 10_000) {
+    const usable = typeof message.path === "string" && /^\/[^\s?#]{0,200}$/.test(message.path) && !message.path.startsWith("/connector/");
+    return { type: "ready" as const, count: Number(message.count), path: usable ? (message.path as string) : "/" };
+  }
+  if (message.type === "cms:editor:unmapped") return { type: "unmapped" as const, suggestion: blockSuggestion(message) };
   if (message.type === "cms:editor:scroll" && typeof message.y === "number" && Number.isFinite(message.y) && message.y >= 0 && message.y <= 10_000_000) return { type: "scroll" as const, y: message.y };
   return null;
 }

@@ -88,6 +88,44 @@ def test_only_enabled_selector_mappings_reach_the_inspector(client, site):
     assert ".disabled" not in body
 
 
+def test_draft_page_text_blocks_reach_the_inspector_before_mappings(client, site):
+    from apps.content.services import get_or_create_config
+
+    SelectorMapping.objects.create(
+        site=site, key="hero_heading", selector=".site-title"
+    )
+    config_row = get_or_create_config(site)
+    config_row.draft["pages"] = {
+        "blocks": [
+            {
+                "id": "b0123456789abcdef",
+                "path": "/jobs/",
+                "label": "Jobs banner heading",
+                "selector": "section.public-hero h1",
+                "text": "Find your next opportunity",
+            },
+            {"id": "b1", "path": "/jobs", "selector": "h1", "text": "Too fragmented"},
+        ]
+    }
+    config_row.save()
+    response = preview(client, site)
+    body = response.content.decode()
+    config = json.loads(
+        unescape(re.search(r'data-cms-editor-config="([^"]+)"', body)[1])
+    )
+    assert config["targets"] == [
+        {
+            "key": "b0123456789abcdef",
+            "label": "Jobs banner heading",
+            "selector": "section.public-hero h1",
+            "path": "/jobs",
+        },
+        {"key": "hero_heading", "label": "Hero heading", "selector": ".site-title"},
+    ]
+    # The editor draft is injected, never values the page could leak.
+    assert "text" not in config["targets"][0]
+
+
 @pytest.mark.parametrize("channel", ["short", "x" * 129, '"><script>alert(1)</script>'])
 def test_invalid_channels_are_rejected_before_fetching(client, site, channel):
     with patch("apps.connector.views.safe_fetch") as fetch:
@@ -122,4 +160,7 @@ def test_bridge_is_public_javascript_not_an_admin_or_write_endpoint(client):
     # Back and forward replay the pages browsed in the frame.
     assert b"cms:editor:back" in response.content
     assert b"cms:editor:forward" in response.content
+    # Unmapped clicks suggest a page text area, scoped to the browsed page.
+    assert b"suggestionFor" in response.content
+    assert b"URLSearchParams" in response.content
     assert client.post("/connector/v1/editor-bridge.js").status_code == 405
