@@ -172,6 +172,8 @@
     var data = event.data;
     if (event.source !== window.parent || event.origin !== config.parentOrigin || !data || data.channel !== config.channel) return;
     if (data.type === "cms:editor:ping") { if (box) send("ready", { count: Math.min(10_000, keyboardTargets()) }); return; }
+    if (data.type === "cms:editor:back") { window.history.back(); return; }
+    if (data.type === "cms:editor:forward") { window.history.forward(); return; }
     if (data.type !== "cms:editor:configure") return;
     enabled = data.enabled === true; configured = true;
     selected = null;

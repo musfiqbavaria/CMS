@@ -119,4 +119,7 @@ def test_bridge_is_public_javascript_not_an_admin_or_write_endpoint(client):
     # frame would navigate to the original host.
     assert b"window.location.protocol" in response.content
     assert b"window.location.host" in response.content
+    # Back and forward replay the pages browsed in the frame.
+    assert b"cms:editor:back" in response.content
+    assert b"cms:editor:forward" in response.content
     assert client.post("/connector/v1/editor-bridge.js").status_code == 405

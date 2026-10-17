@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, ChevronRight, Code2, Globe2, Image, LayoutTemplate,
+  ArrowLeft, ArrowRight, ChevronRight, Code2, Globe2, Image, LayoutTemplate,
   Menu, Monitor, MousePointer2, Paintbrush, PanelBottom, PanelTop, Search, Settings2,
   Share2, Smartphone, Sparkles, Tablet, type LucideIcon,
 } from "lucide-react";
@@ -162,6 +162,12 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
             </div>
           )}
           {onSelect && <button type="button" className="ui-button site-editor-inspect-toggle" data-variant={editMode && editable ? "primary" : "secondary"} disabled={!editable} aria-pressed={editMode && editable} onClick={() => { setEditMode((current) => !current); setUnmapped(false); }}><MousePointer2 size={14} aria-hidden="true" />Click to edit</button>}
+          {showingLive && editable && (
+            <div role="group" aria-label="Preview page history" className="site-editor-segmented">
+              <button type="button" aria-label="Back" title="Back to the previous page you browsed" onClick={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:back", channel }, "*")}><ArrowLeft size={16} aria-hidden="true" /></button>
+              <button type="button" aria-label="Forward" title="Forward to the next page you browsed" onClick={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:forward", channel }, "*")}><ArrowRight size={16} aria-hidden="true" /></button>
+            </div>
+          )}
           <div role="group" aria-label="Preview device" className="site-editor-segmented">
             {DEVICES.map(({ key, label, icon: Icon }) => (
               <button type="button" key={key} aria-label={`${label} preview`} title={label} aria-pressed={device === key} onClick={() => setDevice(key)}><Icon size={16} aria-hidden="true" /></button>
@@ -187,7 +193,7 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
       </div>
       <div className="site-editor-preview-footer">
         {showingLive ? (
-          <p>Read-only original layout. Website scripts, forms and API calls are disabled. Links browse the original pages here (turn off Click to edit) or open in a real tab (Ctrl/⌘+click). Changes stay in your draft until you publish.</p>
+          <p>Read-only original layout. Website scripts, forms and API calls are disabled. Links browse the original pages here (turn off Click to edit) or open in a real tab (Ctrl/⌘+click); Back and Forward revisit pages you already browsed. Changes stay in your draft until you publish.</p>
         ) : (
           <p>This template illustrates your settings, not your website’s exact layout. The connected website keeps its own HTML and selector mappings.</p>
         )}

@@ -67,6 +67,21 @@ describe("EditorPreview", () => {
     fireEvent.click(screen.getByRole("button", { name: "Click to edit" }));
     expect(screen.getByText(/Links browse the live pages/)).toBeInTheDocument();
   });
+
+  it("sends back and forward history commands to the live preview bridge only", () => {
+    render(<EditorPreview html="<h1>My draft</h1>" liveUrl="/connector/v1/preview/testsite/" onSelect={vi.fn()} onEdit={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Back" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Live website" }));
+    const frame = screen.getByTitle("Live website preview") as HTMLIFrameElement;
+    const postMessage = vi.spyOn(frame.contentWindow!, "postMessage").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(screen.getByRole("button", { name: "Forward" }));
+    const channel = new URL(frame.getAttribute("src")!, window.location.origin).searchParams.get("edit_channel");
+    expect(channel).toMatch(/^[a-f0-9]{32}$/);
+    expect(postMessage).toHaveBeenCalledTimes(2);
+    expect(postMessage).toHaveBeenNthCalledWith(1, { type: "cms:editor:back", channel }, "*");
+    expect(postMessage).toHaveBeenNthCalledWith(2, { type: "cms:editor:forward", channel }, "*");
+  });
   it("switches the actual iframe viewport without losing its draft content or sandbox", () => {
     render(<EditorPreview html="<h1>My draft</h1>" liveUrl="https://example.com" onEdit={vi.fn()} />);
     const frame = screen.getByTitle("Draft preview");
