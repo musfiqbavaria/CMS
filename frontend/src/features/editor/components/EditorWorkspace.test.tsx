@@ -54,8 +54,18 @@ describe("EditorPreview", () => {
     render(<EditorPreview html="<html><head></head><body>Draft</body></html>" liveUrl="https://example.com/" onSelect={vi.fn()} onEdit={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Live website" }));
     expect(screen.getByRole("button", { name: "Click to edit" })).toBeDisabled();
-    expect(screen.getByTitle("Live website preview")).toHaveAttribute("sandbox", "allow-scripts");
+    expect(screen.getByTitle("Live website preview")).toHaveAttribute("sandbox", "allow-scripts allow-popups allow-popups-to-escape-sandbox");
     expect(screen.getByTitle("Live website preview")).toHaveAttribute("src", "https://example.com/");
+  });
+
+  it("keeps the verified CMS preview browseable while staying opaque and sandboxed", () => {
+    render(<EditorPreview html="<h1>My draft</h1>" liveUrl="/connector/v1/preview/testsite/" onSelect={vi.fn()} onEdit={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Live website" }));
+    const frame = screen.getByTitle("Live website preview");
+    expect(frame.getAttribute("sandbox")).toContain("allow-popups");
+    expect(frame.getAttribute("sandbox")).not.toContain("allow-same-origin");
+    fireEvent.click(screen.getByRole("button", { name: "Click to edit" }));
+    expect(screen.getByText(/Links browse the live pages/)).toBeInTheDocument();
   });
   it("switches the actual iframe viewport without losing its draft content or sandbox", () => {
     render(<EditorPreview html="<h1>My draft</h1>" liveUrl="https://example.com" onEdit={vi.fn()} />);

@@ -297,7 +297,14 @@ def preview_page(request, site_key: str):
     lower = html.lower()
     head_idx = lower.find("<head")
     head_end = html.find(">", head_idx) + 1
-    base_tag = f'<base href="https://{site.domain}/">'
+    # Resolve relative URLs like a browser would for this exact page: nested
+    # pages keep their own directory, so assets and links stay correct.
+    clean_path = path.split("?", 1)[0].split("#", 1)[0]
+    if clean_path.endswith("/"):
+        base_dir = clean_path
+    else:
+        base_dir = clean_path.rpartition("/")[0] + "/"
+    base_tag = f'<base href="https://{site.domain}{base_dir}">'
     nonce = preview_nonce()
     inspector = str(inspector_tag(request, site, channel, nonce)) if channel else ""
     html = html[:head_end] + base_tag + inspector + html[head_end:]

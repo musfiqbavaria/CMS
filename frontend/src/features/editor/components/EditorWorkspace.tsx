@@ -171,14 +171,14 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
       </div>
       {onSelect && <div className="site-editor-inspector-status" role="status" aria-live="polite" data-warning={unmapped || waiting || (connected && connection.count === 0)}>
         <MousePointer2 size={14} aria-hidden="true" />
-        <p>{!editable ? "Use Draft design or a verified CMS website preview for click-to-edit." : !editMode ? "Selection is off. Preview links and forms remain disabled." : waiting ? "The inspector has not connected. Try Draft design or check your preview connection." : !connected ? "Connecting the preview inspector…" : connection.count === 0 ? "No mapped areas found. Review selector mappings or use Draft design." : unmapped ? "This area is not mapped. Choose a section from the editor or update its selector mapping." : selectedKey ? <><strong>{EDIT_TARGETS[selectedKey].label}</strong> selected. Edit its settings in the panel.</> : "Hover or tab to an area, then click or press Enter to edit its settings."}</p>
+        <p>{!editable ? "Use Draft design or a verified CMS website preview for click-to-edit." : !editMode ? (showingLive ? "Selection is off. Links browse the live pages here; forms and scripts stay disabled." : "Selection is off. Preview links and forms remain disabled.") : waiting ? "The inspector has not connected. Try Draft design or check your preview connection." : !connected ? "Connecting the preview inspector…" : connection.count === 0 ? "No mapped areas found. Review selector mappings or use Draft design." : unmapped ? "This area is not mapped. Choose a section from the editor or update its selector mapping." : selectedKey ? <><strong>{EDIT_TARGETS[selectedKey].label}</strong> selected. Edit its settings in the panel.</> : "Hover or tab to an area, then click or press Enter to edit its settings. Ctrl/⌘+click a link to browse the site."}</p>
       </div>}
       <div className="site-editor-browser-bar"><span aria-hidden="true" className="site-editor-browser-dots"><i /><i /><i /></span><span>{showingLive ? liveUrl : "Template canvas"}</span><span className="ml-auto">{selected.width} px</span></div>
       <div className="site-editor-preview-stage">
         <div ref={viewport} className="site-editor-preview-viewport">
           <div className="site-editor-preview-frame" style={{ width: selected.width * scale, height: selected.height * scale }}>
             {showingLive ? (
-              <iframe ref={iframe} title="Live website preview" src={liveSrc!} sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
+              <iframe ref={iframe} title="Live website preview" src={liveSrc!} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
             ) : (
               <iframe ref={iframe} title="Draft preview" srcDoc={draftHtml} sandbox="allow-scripts" referrerPolicy="no-referrer" onLoad={() => iframe.current?.contentWindow?.postMessage({ type: "cms:editor:ping", channel }, "*")} style={{ width: selected.width, height: selected.height, transform: `scale(${scale})` }} />
             )}
@@ -187,7 +187,7 @@ export function EditorPreview({ html, liveUrl, onEdit, onSelect, selectedKey }: 
       </div>
       <div className="site-editor-preview-footer">
         {showingLive ? (
-          <p>Read-only original layout. Website scripts, links, forms and API calls are disabled in the CMS preview. Only mapped areas are selectable; changes stay in your draft until you publish.</p>
+          <p>Read-only original layout. Website scripts, forms and API calls are disabled. Links browse the original pages here (turn off Click to edit) or open in a real tab (Ctrl/⌘+click). Changes stay in your draft until you publish.</p>
         ) : (
           <p>This template illustrates your settings, not your website’s exact layout. The connected website keeps its own HTML and selector mappings.</p>
         )}

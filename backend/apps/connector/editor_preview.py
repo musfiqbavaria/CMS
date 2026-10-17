@@ -55,7 +55,9 @@ def preview_policy(request, site, nonce):
             "object-src 'none'",
             "form-action 'none'",
             "frame-ancestors 'self'",
-            "sandbox allow-scripts",
+            # allow-popups lets the bridge open original pages in real tabs
+            # (Ctrl/⌘+click, target=_blank) without leaving the sandbox.
+            "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox",
         ]
     )
 

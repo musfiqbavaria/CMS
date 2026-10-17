@@ -46,7 +46,7 @@ def test_nonce_bridge_and_opaque_sandbox_protect_the_admin(client, site):
     nonce = re.search(r'<script nonce="([^"]+)"', body)[1]
     assert f"script-src 'nonce-{nonce}'" in policy
     for directive in [
-        "sandbox allow-scripts",
+        "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox",
         "connect-src 'none'",
         "form-action 'none'",
         "frame-src 'none'",
@@ -102,7 +102,9 @@ def test_plain_preview_stays_isolated_without_injecting_a_bridge(client, site):
     response = preview(client, site, "")
     assert response.status_code == 200
     assert "editor-bridge.js" not in response.content.decode()
-    assert "sandbox allow-scripts" in response["Content-Security-Policy"]
+    policy = response["Content-Security-Policy"]
+    assert "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox" in policy
+    assert "allow-same-origin" not in policy
 
 
 def test_bridge_is_public_javascript_not_an_admin_or_write_endpoint(client):
@@ -110,4 +112,6 @@ def test_bridge_is_public_javascript_not_an_admin_or_write_endpoint(client):
     assert response.status_code == 200
     assert "javascript" in response["Content-Type"]
     assert b"cms:editor:configure" in response.content
+    # Browsing pages keeps the edit channel, so click-to-edit survives links.
+    assert b"edit_channel" in response.content
     assert client.post("/connector/v1/editor-bridge.js").status_code == 405

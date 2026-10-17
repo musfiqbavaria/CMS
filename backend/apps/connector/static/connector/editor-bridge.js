@@ -80,14 +80,71 @@
     selected = current; hovered = null; draw(); send("select", { key: current.target.key });
   }
 
-  // Both modes remain read-only. Capture before website handlers can navigate or submit.
+  // Links keep browsing the original site: same-site clicks move the preview to
+  // the next page, modified clicks and new-tab targets open the real page in a
+  // browser tab. Everything else stays read-only.
+  function previewPrefix() {
+    var match = /^\/connector\/v1\/preview\/[^/]+\/$/.exec(window.location.pathname);
+    return match ? match[0] : null;
+  }
+
+  function browse(url, prefix) {
+    window.location.href =
+      prefix + "?path=" + encodeURIComponent(url.pathname + url.search) +
+      "&edit_channel=" + encodeURIComponent(config.channel) + url.hash;
+  }
+
+  function follow(anchor, newTab) {
+    var prefix = previewPrefix();
+    var base = document.querySelector("base");
+    if (!prefix || !base || !base.href) return;
+    var raw = anchor.getAttribute("href");
+    if (!raw) return;
+    if (raw.charAt(0) === "#") {
+      var target = raw.length > 1 ? document.getElementById(raw.slice(1)) : null;
+      if (target) target.scrollIntoView(); else window.scrollTo(0, 0);
+      return;
+    }
+    var url;
+    try { url = new URL(raw, base.href); } catch (_) { return; }
+    if (url.protocol !== "http:" && url.protocol !== "https:") return;
+    var sameSite = url.origin === new URL(base.href).origin;
+    if (sameSite && !newTab) { browse(url, prefix); return; }
+    if (window.open(url.href, "_blank", "noopener")) return;
+    if (sameSite) browse(url, prefix);
+  }
+
+  function anchorOf(event) {
+    return event.target instanceof Element ? event.target.closest("a[href]") : null;
+  }
+
+  function modified(event, anchor) {
+    return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ||
+      anchor.getAttribute("target") === "_blank";
+  }
+
   window.addEventListener("click", function (event) {
-    if (enabled || (event.target instanceof Element && event.target.closest("a, button, input[type=submit]"))) {
+    var anchor = anchorOf(event);
+    if (enabled) {
       event.preventDefault(); event.stopImmediatePropagation();
-      if (enabled) pick(hit(event.target));
+      if (anchor && modified(event, anchor)) follow(anchor, true);
+      else pick(hit(event.target));
+      return;
+    }
+    if (anchor) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      follow(anchor, modified(event, anchor));
+      return;
+    }
+    if (event.target instanceof Element && event.target.closest("button, input[type=submit]")) {
+      event.preventDefault(); event.stopImmediatePropagation();
     }
   }, true);
-  window.addEventListener("auxclick", function (event) { event.preventDefault(); event.stopImmediatePropagation(); }, true);
+  window.addEventListener("auxclick", function (event) {
+    var anchor = anchorOf(event);
+    event.preventDefault(); event.stopImmediatePropagation();
+    if (anchor) follow(anchor, true);
+  }, true);
   window.addEventListener("submit", function (event) { event.preventDefault(); event.stopImmediatePropagation(); }, true);
   window.addEventListener("keydown", function (event) {
     if (enabled && (event.key === "Enter" || event.key === " ") && hit(event.target)) {

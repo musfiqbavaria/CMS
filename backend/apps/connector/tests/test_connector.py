@@ -188,6 +188,21 @@ def test_preview_rejects_unknown_built_and_bad_path(client, site):
     assert resp.status_code == 400
 
 
+def test_preview_base_tracks_the_nested_page(client, site):
+    site.verification_status = Site.VerificationStatuses.VERIFIED
+    site.save()
+
+    class FakeResult:
+        text = "<html><head></head><body>Nested</body></html>"
+
+    with patch("apps.connector.views.safe_fetch", return_value=FakeResult()):
+        resp = client.get(
+            f"/connector/v1/preview/{site.site_key}/", {"path": "/products/x"}
+        )
+    assert resp.status_code == 200
+    assert '<base href="https://shop.example.com/products/">' in resp.content.decode()
+
+
 def test_mapping_crud(admin_client, site):
     base = f"/api/v1/sites/{site.pk}/mappings/"
     # Prime the default mapping set through the public config endpoint.
