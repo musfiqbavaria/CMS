@@ -114,4 +114,9 @@ def test_bridge_is_public_javascript_not_an_admin_or_write_endpoint(client):
     assert b"cms:editor:configure" in response.content
     # Browsing pages keeps the edit channel, so click-to-edit survives links.
     assert b"edit_channel" in response.content
+    # The preview injects <base href="…original site…"> and relative location
+    # assignments honour it, so browsing must target this CMS absolutely or the
+    # frame would navigate to the original host.
+    assert b"window.location.protocol" in response.content
+    assert b"window.location.host" in response.content
     assert client.post("/connector/v1/editor-bridge.js").status_code == 405

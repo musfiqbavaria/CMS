@@ -89,8 +89,12 @@
   }
 
   function browse(url, prefix) {
+    // Absolute URL on purpose: the preview injects <base href="…original site…">,
+    // and relative location assignments resolve against it, which would send the
+    // frame to the original site instead of this preview endpoint.
+    var origin = window.location.protocol + "//" + window.location.host;
     window.location.href =
-      prefix + "?path=" + encodeURIComponent(url.pathname + url.search) +
+      origin + prefix + "?path=" + encodeURIComponent(url.pathname + url.search) +
       "&edit_channel=" + encodeURIComponent(config.channel) + url.hash;
   }
 
