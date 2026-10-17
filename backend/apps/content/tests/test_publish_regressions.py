@@ -9,7 +9,7 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
-from apps.connector.models import DEFAULT_SELECTORS, SelectorMapping
+from apps.connector.models import DEFAULT_SELECTORS
 from apps.connector.services import (
     build_payload,
     cache_key,
@@ -257,10 +257,8 @@ class PublishRegressionTests(TestCase):
             after.json()["mappings"],
         )
 
-    def test_loader_revalidates_instead_of_remaining_cached_for_an_hour(self):
+    def test_loader_is_not_cached_so_browser_reporting_tickets_stay_fresh(self):
         response = self.client.get("/connector/v1/loader.js?site=example")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response["Cache-Control"], "public, max-age=0, must-revalidate"
-        )
+        self.assertEqual(response["Cache-Control"], "no-store")
         self.assertIn(b"__CMS_CONNECTOR__", response.content)

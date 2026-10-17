@@ -3,6 +3,34 @@
 from django.db import models
 
 
+class DeliveryReport(models.Model):
+    """Bounded browser observations; not an independent proof of deployment."""
+
+    site = models.ForeignKey(
+        "sites.Site", on_delete=models.CASCADE, related_name="delivery_reports"
+    )
+    attempt_id = models.UUIDField(unique=True)
+    version_no = models.PositiveIntegerField(null=True, blank=True)
+    revision = models.CharField(max_length=64, blank=True, default="")
+    state = models.CharField(max_length=16)
+    context = models.CharField(max_length=16)
+    page_path = models.CharField(max_length=256, default="/")
+    applied = models.JSONField(default=list)
+    unmatched = models.JSONField(default=list)
+    errors = models.JSONField(default=list)
+    started_at = models.DateTimeField()
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-started_at", "-received_at", "-id"]
+        indexes = [
+            models.Index(
+                fields=["site", "context", "-started_at"],
+                name="delivery_site_context_idx",
+            )
+        ]
+
+
 class SelectorMapping(models.Model):
     """Maps a published config value onto the visitor's DOM via a CSS selector."""
 

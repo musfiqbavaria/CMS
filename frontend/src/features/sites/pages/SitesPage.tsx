@@ -322,7 +322,10 @@ export default function SitesPage({ startWithNew = false }: { startWithNew?: boo
                             { label: "Setup", icon: <Wrench size={16} className="text-slate-400" />, to: `/websites/${site.id}/setup` },
                             ...(site.type === "built"
                               ? [{ label: "Domains", icon: <Globe size={16} className="text-slate-400" />, to: `/websites/${site.id}/domains` }]
-                              : [{ label: "Verify", icon: <ShieldCheck size={16} className="text-slate-400" />, to: `/websites/${site.id}/verify` }]),
+                              : [
+                                { label: "Publish status", icon: <ShieldCheck size={16} className="text-slate-400" />, to: `/websites/${site.id}/publish-status` },
+                                { label: "Verify", icon: <ShieldCheck size={16} className="text-slate-400" />, to: `/websites/${site.id}/verify` },
+                              ]),
                             {
                               label: site.status === "active" ? "Deactivate" : "Activate",
                               icon: <Power size={16} className="text-slate-400" />,

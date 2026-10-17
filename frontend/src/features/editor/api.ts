@@ -36,6 +36,7 @@ export function usePublish(siteId: number) {
     mutationFn: (version_id?: number) =>
       api.post<ConfigVersion>(`/v1/sites/${siteId}/config/publish/`, version_id ? { version_id } : {}).then((r) => r.data),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["delivery-status", siteId] });
       qc.invalidateQueries({ queryKey: ["editor-config", siteId] });
       qc.invalidateQueries({ queryKey: ["editor-versions", siteId] });
     },
@@ -48,6 +49,7 @@ export function useRollback(siteId: number) {
     mutationFn: (versionId: number) =>
       api.post<ConfigVersion>(`/v1/sites/${siteId}/config/versions/${versionId}/rollback/`).then((r) => r.data),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["delivery-status", siteId] });
       qc.invalidateQueries({ queryKey: ["editor-config", siteId] });
       qc.invalidateQueries({ queryKey: ["editor-versions", siteId] });
     },

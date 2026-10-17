@@ -180,7 +180,35 @@ For diagnostics, inspect `window.__CMS_CONNECTOR__` in the connected page's
 console: `state`, `version`, `applied`, `unmatched`, and `errors`. Setup links to
 the public published-config endpoint. HTTP 404 means the key/site is unknown or
 inactive; missing selectors are reported without preventing other fields from
-updating. Configuration and loader responses revalidate on each new page load.
+updating. Configuration responses revalidate on each new page load; the loader
+is not cached so each browser load receives its own reporting ticket.
+
+### Publish status dashboard
+
+Open **Publish status** from a connected website's action menu, editor, or Setup.
+The dashboard compares the current published version and mapping revision with
+the most recent website-browser observation. It polls every 10 seconds while
+visible and shows applied fields, missing selectors, application errors, and
+the latest 20 reports. Publishing alone never creates a success report.
+
+- `GET /api/v1/sites/<id>/delivery/` requires a CMS admin session.
+- The CMS-served loader issues a signed, site-scoped, 10-minute report ticket.
+  `POST /connector/v1/reports/<site_key>/` accepts bounded reports only from
+  the registered website, its verified aliases, or the CMS preview origin.
+- CMS-origin previews are kept separate from website reports. Sandboxed previews
+  with opaque origins cannot confirm website delivery. A browser report is not
+  an independent audit, proof of image loading, or confirmation for every page.
+- Replayed retained tickets are ignored. Reports are limited to 60 per minute and retained to
+  a maximum of 200 per website. Query strings, fragments, cookies, full URLs,
+  and browser identity are not recorded in report records; long path segments
+  are redacted. Normal web-server request logging is separate.
+- A report is recent for 15 minutes. No report means **waiting**, not success.
+  Reload the actual website after publishing. CSP, browser local-network rules,
+  and unreachable localhost can prevent either configuration or reporting.
+
+This feature requires the `connector.0003_deliveryreport` database migration.
+The existing website's source and installed script tag do not need changes if
+they already point to this CMS's loader endpoint.
 
 Dependency-free connector checks (Node 20+):
 

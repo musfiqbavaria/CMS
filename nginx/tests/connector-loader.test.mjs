@@ -107,12 +107,20 @@ async function run(data, mappings = [], options = {}) {
     dispatchEvent(event) { events.push(event); },
   };
   if (options.noKey) dom.script.src = "https://cms.example.com/connector/v1/loader.js";
-  const window = { document, location: new URL("https://bavariagarment.de/"), console: {} };
-  const payload = { verified: options.verified ?? true, published_version: 7, data: { overrides: [], ...data }, mappings };
+  if (options.reportToken) dom.script.setAttribute("data-cms-report-token", options.reportToken);
+  const window = { document, location: new URL(options.pageUrl || "https://bavariagarment.de/"), console: {} };
+  const payload = { verified: options.verified ?? true, published_version: 7, delivery_revision: "a".repeat(64), data: { overrides: [], ...data }, mappings };
   vm.runInNewContext(source, {
     window, document, URL, CustomEvent: class { constructor(type, detail) { this.type = type; this.detail = detail.detail; } },
     console: { warn(...args) { warnings.push(args); } },
-    async fetch(url, settings) { requests.push({ url, settings }); return { ok: !options.httpError, status: options.httpError ?? 200, async json() { return payload; } }; },
+    async fetch(url, settings) {
+      requests.push({ url, settings });
+      if (settings.method === "POST") {
+        if (options.reportFailure) throw new Error("Reporting unreachable");
+        return { ok: true, status: 202 };
+      }
+      return { ok: !options.httpError, status: options.httpError ?? 200, async json() { return payload; } };
+    },
   });
   await new Promise(setImmediate);
   return { ...dom, document, status: window.__CMS_CONNECTOR__, events, warnings, requests };
@@ -239,4 +247,56 @@ test("config requests revalidate without cookies and errors are visible diagnost
   const missing = await run({}, [], { noKey: true });
   assert.equal(missing.requests.length, 0);
   assert.equal(missing.status.state, "error");
+});
+
+test("a signed loader reports the applied version without credentials or URL secrets", async () => {
+  const result = await run({ site_name: "Reported brand" }, [{ key: "site_name", selector: "header strong" }], { reportToken: "signed-ticket", pageUrl: "https://bavariagarment.de/about?token=private#account" });
+  assert.equal(result.status.state, "ready");
+  assert.equal(result.status.reporting, "sent");
+  const request = result.requests[1];
+  assert.equal(request.url, "https://cms.example.com/connector/v1/reports/KEY/");
+  assert.equal(request.settings.credentials, "omit");
+  assert.equal(request.settings.referrerPolicy, "no-referrer");
+  assert.equal(request.settings.keepalive, true);
+  assert.equal(request.settings.headers["Content-Type"], "text/plain");
+  const body = JSON.parse(request.settings.body);
+  assert.equal(body.token, "signed-ticket");
+  assert.equal(body.version, 7);
+  assert.equal(body.revision, "a".repeat(64));
+  assert.equal(body.page_path, "/about");
+  assert.ok(body.applied.includes("site_name"));
+  assert.ok(!request.settings.body.includes("private"));
+});
+
+test("reports include per-field missing selectors and application errors", async () => {
+  const result = await run({ site_name: "Brand", hero: { heading: "Missing" } }, [{ key: "site_name", selector: "[" }, { key: "hero_heading", selector: ".absent" }], { reportToken: "ticket" });
+  const body = JSON.parse(result.requests[1].settings.body);
+  assert.equal(body.state, "partial");
+  assert.equal(body.unmatched[0].key, "hero_heading");
+  assert.equal(body.unmatched[0].selector, ".absent");
+  assert.equal(body.errors[0].key, "site_name");
+});
+
+test("configuration failures are reportable even when no version was loaded", async () => {
+  const result = await run({}, [], { reportToken: "ticket", httpError: 503 });
+  const body = JSON.parse(result.requests[1].settings.body);
+  assert.equal(body.state, "error");
+  assert.equal(body.version, null);
+  assert.equal(body.revision, "");
+  assert.equal(body.errors[0].key, "configuration");
+  assert.match(body.errors[0].message, /503/);
+});
+
+test("reporting failures never undo applied content or change its result", async () => {
+  const result = await run({ site_name: "Still applied" }, [], { reportToken: "ticket", reportFailure: true });
+  assert.equal(result.document.title, "Still applied");
+  assert.equal(result.status.state, "ready");
+  assert.equal(result.status.reporting, "unreachable");
+  assert.equal(result.events.length, 1);
+});
+
+test("unsigned installations do not submit unscoped reports", async () => {
+  const result = await run({ site_name: "Unsigned" });
+  assert.equal(result.requests.length, 1);
+  assert.equal(result.status.reporting, "unavailable");
 });

@@ -30,7 +30,7 @@ export default function SetupPage() {
     <div className="space-y-4">
       <div>
         <Link to="/websites" className="text-sm text-slate-500 underline">← Websites</Link>
-        <PageHeader title="Bring your website together" eyebrow="Integration setup" description={site.domain} />
+        <PageHeader title="Bring your website together" eyebrow="Integration setup" description={site.domain} actions={<Link to={`/websites/${siteId}/publish-status`} className="ui-button" data-variant="secondary">Publish status</Link>} />
         <div className="mt-2 flex gap-2">
           <VerificationBadge status={site.verification_status} />
           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium dark:bg-slate-700">
@@ -91,6 +91,7 @@ export default function SetupPage() {
 
       <Card>
         <CardTitle>Check what the connector applied</CardTitle>
+        <p className="mt-2 text-sm"><Link to={`/websites/${siteId}/publish-status`} className="font-semibold underline">Open publish status</Link> to compare the published version with browser reports, inspect missing selectors, and review application errors.</p>
         <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Open your connected website's browser console and inspect <code>window.__CMS_CONNECTOR__</code>. It reports the published version, applied fields, missing selectors, and errors. A missing selector means the website needs a matching element or a corrected mapping.</p>
         <p className="mt-3 text-xs leading-6 text-[var(--muted)]">Complex sections use stable hooks such as <code>data-cms="navigation"</code>, <code>data-cms="footer-columns"</code>, and <code>data-cms="newsletter"</code>. Newsletter settings toggle an existing form; the connector does not provide a subscription service. Metadata is applied in the browser; crawler/share previews may require server-side integration.</p>
       </Card>

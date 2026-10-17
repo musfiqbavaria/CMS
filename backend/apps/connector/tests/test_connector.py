@@ -122,7 +122,7 @@ def test_rollback_reflects_immediately(client, site):
     assert resp.json()["data"]["hero"]["heading"] == "Buy now"
 
 
-def test_loader_js(client):
+def test_loader_js(client, db):
     resp = client.get("/connector/v1/loader.js?site=abc")
     assert resp.status_code == 200
     assert "javascript" in resp["Content-Type"]

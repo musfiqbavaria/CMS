@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def cache_key(site_key: str) -> str:
-    return f"connector:config:v2:{site_key}"
+    return f"connector:config:v3:{site_key}"
 
 
 def public_site(site_key: str):
@@ -137,11 +137,11 @@ def build_payload(site) -> dict:
         for m in sorted(site.mappings.all(), key=lambda item: item.key)
         if m.enabled
     ]
-    return {
+    payload = {
         "site_key": site.site_key,
         "domain": site.domain,
         "verified": verified,
-        "schema_version": 2,
+        "schema_version": 3,
         "published_version": (
             site.config.published_version.version_no
             if hasattr(site, "config") and site.config.published_version_id
@@ -150,6 +150,8 @@ def build_payload(site) -> dict:
         "data": data,
         "mappings": mappings,
     }
+    payload["delivery_revision"] = etag_for(payload).strip('"')
+    return payload
 
 
 def etag_for(payload: dict) -> str:
@@ -165,6 +167,8 @@ def get_cached_payload(site) -> tuple:
     ensure_default_mappings(site)
     revision = etag_for(
         {
+            "schema": 3,
+            "verified": site.verification_status,
             "published": (
                 site.config.published_version_id if hasattr(site, "config") else None
             ),

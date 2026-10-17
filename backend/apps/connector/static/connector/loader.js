@@ -1,9 +1,11 @@
-/* CMS connector v2. Published configuration only; custom code requires ownership. */
+/* CMS connector v3. Published configuration only; custom code requires ownership. */
 (function () {
   "use strict";
 
   var currentScript = document.currentScript;
   var nonce = currentScript && currentScript.nonce;
+  var reportToken = currentScript && currentScript.getAttribute("data-cms-report-token");
+  var deliveryRevision = "";
 
   function findSite() {
     var script = currentScript || document.querySelector("script[data-cms-site]");
@@ -327,6 +329,7 @@
     if (!cfg || !cfg.data) throw new Error("Published configuration is missing data");
     var data = cfg.data;
     status.version = cfg.published_version || null;
+    deliveryRevision = cfg.delivery_revision || "";
     applyMetadata(data);
     (cfg.mappings || []).forEach(function (mapping) {
       try {
@@ -346,6 +349,35 @@
     document.dispatchEvent(new CustomEvent("cms:ready", { detail: status }));
   }
 
+  function reportDelivery() {
+    // Reporting is best-effort and must never interfere with the website.
+    // No credentials, full URL, query strings, or fragments are collected.
+    if (!reportToken) { status.reporting = "unavailable"; return; }
+    if (status.state !== "error" && (!status.version || !deliveryRevision)) {
+      status.reporting = "unavailable"; return;
+    }
+    try {
+      status.reporting = "sending";
+      fetch(site.origin + "/connector/v1/reports/" + encodeURIComponent(site.key) + "/", {
+        method: "POST", mode: "cors", credentials: "omit", referrerPolicy: "no-referrer", keepalive: true,
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          token: reportToken, version: status.version, revision: deliveryRevision,
+          state: status.state, page_path: window.location.pathname.slice(0, 1024),
+          applied: status.applied.slice(0, 40),
+          unmatched: status.unmatched.slice(0, 40).map(function (field) {
+            return { key: field.key, selector: String(field.selector || "").slice(0, 255) };
+          }),
+          errors: status.errors.slice(0, 40).map(function (error) {
+            return { key: error.key || "configuration", message: String(error.message || error).slice(0, 300) };
+          }),
+        }),
+      }).then(function (response) {
+        status.reporting = response.ok ? "sent" : "rejected";
+      }).catch(function () { status.reporting = "unreachable"; });
+    } catch (_) { status.reporting = "unreachable"; }
+  }
+
   fetch(site.origin + "/connector/v1/config/" + encodeURIComponent(site.key) + "/", {
     headers: { Accept: "application/json" }, cache: "no-cache", credentials: "omit",
   }).then(function (response) {
@@ -354,5 +386,5 @@
   }).then(applyConfig).catch(function (error) {
     status.state = "error"; status.errors.push(error.message);
     if (window.console) console.warn("[cms] Unable to apply published changes:", error);
-  });
+  }).then(reportDelivery);
 })();

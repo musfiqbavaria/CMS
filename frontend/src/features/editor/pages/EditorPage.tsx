@@ -202,6 +202,7 @@ export default function EditorPage() {
         <div className="site-editor-context-name"><h2>{site?.name ?? "Your website"}</h2><p>{site?.domain ?? "Connected website"}</p></div>
         <Badge tone={config.published_version_no != null ? "green" : "slate"}>{config.published_version_no != null ? `Published v${config.published_version_no}` : "Not published yet"}</Badge>
         <div className="site-editor-context-links">
+          <Link to={`/websites/${siteId}/publish-status`} className="ui-button" data-variant="secondary"><CheckCircle2 size={14} aria-hidden="true" /> Publish status</Link>
           <Link to={`/websites/${siteId}/setup`} className="ui-button" data-variant="secondary"><Plug size={14} aria-hidden="true" /> Connection</Link>
           {liveUrl && <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="ui-button" data-variant="secondary">Open website <ArrowUpRight size={14} aria-hidden="true" /></a>}
         </div>

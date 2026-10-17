@@ -53,6 +53,7 @@ const DashboardPage = lazy(resilient(() => import("../features/dashboard/pages/D
 const EditorPage = lazy(resilient(() => import("../features/editor/pages/EditorPage")));
 const MappingsPage = lazy(resilient(() => import("../features/connector/pages/MappingsPage")));
 const SetupPage = lazy(resilient(() => import("../features/connector/pages/SetupPage")));
+const PublishStatusPage = lazy(resilient(() => import("../features/connector/pages/PublishStatusPage")));
 const MediaPage = lazy(resilient(() => import("../features/builder/pages/MediaPage")));
 const MonitoringPage = lazy(resilient(() => import("../features/monitoring/MonitoringPage")));
 const AuditPage = lazy(resilient(() => import("../features/audit/AuditPage")));
@@ -94,6 +95,7 @@ export const router = createBrowserRouter([
           { path: "/websites/:id/domains", element: lazyPage(<DomainsPage />) },
           { path: "/websites/:id/edit", element: lazyPage(<EditorPage />) },
           { path: "/websites/:id/setup", element: lazyPage(<SetupPage />) },
+          { path: "/websites/:id/publish-status", element: lazyPage(<PublishStatusPage />) },
           { path: "/websites/:id/mappings", element: lazyPage(<MappingsPage />) },
           { path: "/builder", element: lazyPage(<BuilderHome />) },
           { path: "/builder/pages", element: lazyPage(<PagesPage />) },

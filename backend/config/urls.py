@@ -19,6 +19,9 @@ urlpatterns = [
     path("api/v1/", include("apps.builder.urls")),
     path("api/v1/", include("apps.monitoring.urls")),
     path(
+        "api/v1/sites/<int:site_pk>/delivery/", include("apps.connector.delivery_urls")
+    ),
+    path(
         "api/v1/sites/<int:site_pk>/mappings/", include("apps.connector.mapping_urls")
     ),
     path("api/v1/audit/", include("apps.audit.urls")),

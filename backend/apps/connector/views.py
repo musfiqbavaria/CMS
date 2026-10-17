@@ -1,12 +1,15 @@
 """Public connector endpoints (no auth) + admin mapping CRUD."""
 
+import json
 import re
 from pathlib import Path
 
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
+from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework import serializers
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -68,9 +71,78 @@ def loader_js(request):
         body = LOADER_JS.read_bytes()
     except OSError:
         return cors(JsonResponse({"detail": "Loader unavailable."}, status=500))
+    # The public config keeps stable ETags. A fresh, short-lived report ticket
+    # belongs to the loader request instead of the cached config body.
+    from .delivery import issue_ticket
+
+    site = Site.objects.filter(
+        site_key=request.GET["site"].strip(),
+        status=Site.Statuses.ACTIVE,
+        type=Site.Types.CONNECTED,
+        verification_status=Site.VerificationStatuses.VERIFIED,
+    ).first()
+    if site:
+        bootstrap = (
+            "(function(){var s=document.currentScript;"
+            'if(s)s.setAttribute("data-cms-report-token",%s);})();\n'
+            % json.dumps(issue_ticket(site))
+        )
+        body = bootstrap.encode() + body
     resp = HttpResponse(body, content_type="application/javascript")
-    resp["Cache-Control"] = "public, max-age=0, must-revalidate"
+    resp["Cache-Control"] = "no-store"
     return cors(resp)
+
+
+@csrf_exempt
+@require_POST
+def delivery_report(request, site_key: str):
+    """Public, bounded browser observations. No CMS credentials are accepted."""
+    from .delivery import ReportSerializer, accept_report
+
+    site = Site.objects.filter(
+        site_key=site_key,
+        type=Site.Types.CONNECTED,
+        status=Site.Statuses.ACTIVE,
+        verification_status=Site.VerificationStatuses.VERIFIED,
+    ).first()
+    if site is None:
+        return cors(JsonResponse({"detail": "Not found."}, status=404))
+    try:
+        if (
+            int(request.META.get("CONTENT_LENGTH") or 0) > 32768
+            or len(request.body) > 32768
+        ):
+            return cors(JsonResponse({"detail": "Report exceeds 32 KB."}, status=413))
+        serializer = ReportSerializer(data=json.loads(request.body))
+        serializer.is_valid(raise_exception=True)
+        created = accept_report(request, site, serializer.validated_data)
+    except (ValueError, UnicodeDecodeError):
+        return cors(JsonResponse({"detail": "Invalid JSON report."}, status=400))
+    except APIException as exc:
+        response = JsonResponse({"detail": exc.detail}, status=exc.status_code)
+        if getattr(exc, "wait", None):
+            response["Retry-After"] = str(int(exc.wait))
+        return cors(response)
+    response = JsonResponse({"accepted": created}, status=202)
+    response["Cache-Control"] = "no-store"
+    return cors(response)
+
+
+class DeliveryStatusViewSet(GenericViewSet):
+    """Private observations and diagnosis for an individual website."""
+
+    @extend_schema(responses=OpenApiTypes.OBJECT)
+    def retrieve(self, request, site_pk=None):
+        from django.shortcuts import get_object_or_404
+
+        from .delivery import delivery_status
+
+        site = get_object_or_404(
+            Site.objects.select_related("config__published_version"), pk=site_pk
+        )
+        response = Response(delivery_status(site))
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 @csrf_exempt
