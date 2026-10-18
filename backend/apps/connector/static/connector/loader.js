@@ -56,6 +56,18 @@
     if (copy) el.insertBefore(copy, el.firstChild);
   }
 
+  // Brand identity fields (site name, tagline, logo) apply to EVERY element the
+  // site explicitly marks with a data-cms hook, so pages with several brand
+  // spots (navbar plus a login brand block) all stay in sync. Pages without
+  // hooks keep the legacy behavior: only the first selector match applies.
+  function brandTargets(mapping) {
+    var all;
+    try { all = Array.prototype.slice.call(document.querySelectorAll(mapping.selector)); }
+    catch (_) { all = []; }
+    var hooks = all.filter(function (el) { return el.hasAttribute("data-cms"); });
+    return hooks.length ? hooks : all.slice(0, 1);
+  }
+
   function localHost(host) {
     return host === "localhost" || /^(127\.|\[?::1\]?$)/.test(host) || /^(backend|nginx|daphne)$/.test(host);
   }
@@ -203,21 +215,34 @@
     var value;
     switch (mapping.key) {
       case "site_name":
-        return supplied(data, "general.site_name", data.site_name) ? text(el, data.site_name) : null;
+        if (!supplied(data, "general.site_name", data.site_name)) return null;
+        var nameTargets = brandTargets(mapping);
+        if (!nameTargets.length) return text(el, data.site_name);
+        nameTargets.forEach(function (target) { text(target, data.site_name); });
+        return true;
       case "site_tagline":
-        return supplied(data, "general.tagline", data.tagline) ? text(el, data.tagline) : null;
+        if (!supplied(data, "general.tagline", data.tagline)) return null;
+        var taglineTargets = brandTargets(mapping);
+        if (!taglineTargets.length) return text(el, data.tagline);
+        taglineTargets.forEach(function (target) { text(target, data.tagline); });
+        return true;
       case "site_logo":
         if (!supplied(data, "branding.logo_url", data.logo_url) && !changed(data, "header.logo_url")) return null;
-        if (!el && data.logo_url && mapping.selector.indexOf("header img") !== -1) {
+        var logoTargets = brandTargets(mapping);
+        if (!logoTargets.length && data.logo_url && mapping.selector.indexOf("header img") !== -1) {
           var brand = document.querySelector('[data-cms="brand"], header .navbar-brand, header .brand');
+          var logoTarget = null;
           if (brand) {
-            el = document.createElement("img"); el.setAttribute("data-cms", "logo");
-            el.alt = data.site_name || "Logo"; el.style.maxHeight = "40px"; el.style.width = "auto";
-            brand.insertBefore(el, brand.firstChild);
+            logoTarget = document.createElement("img"); logoTarget.setAttribute("data-cms", "logo");
+            logoTarget.alt = data.site_name || "Logo"; logoTarget.style.maxHeight = "40px"; logoTarget.style.width = "auto";
+            brand.insertBefore(logoTarget, brand.firstChild);
             var mark = brand.querySelector(".brand-mark"); if (mark) mark.hidden = true;
           }
+          return image(logoTarget, data.logo_url);
         }
-        return image(el, data.logo_url);
+        if (!logoTargets.length) return image(el, data.logo_url);
+        logoTargets.forEach(function (target) { image(target, data.logo_url); });
+        return true;
       case "header_settings":
         if (!changed(data, "header.layout") && !changed(data, "header.sticky")) return null;
         if (!el) return false;
